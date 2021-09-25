@@ -17,11 +17,13 @@ import sys
 ## global variables
 fullscreen=False
 quit_button="escape"
-key_confirm="return"
-key_left="g"   # "lalt"
-key_right="h"  # "rctrl"
-probe_keys=["1","2"]
-n_trials_training_session=10
+#key_confirm="return"
+key_left="g" 
+key_right="h" 
+key_yes = "y"
+key_no = "n"
+probe_keys=["1","2", "3", "4", "5"]
+n_trials_training_session=1
 ISI = 0.75
 sleeptime=0 # 5
 stimcolor="white"
@@ -29,7 +31,7 @@ stimcolor="white"
 
 ## Likert-scale
 class LikertScale:
-    def __init__(self, win, nposs=2, instruction_text=u"", scale_labels=[]):
+    def __init__(self, win, nposs=5, instruction_text=u"", scale_labels=[]):
         start,end=-.5, .5
         ypad=.05
         instru = visual.TextStim(win=win, ori=0, name='instru',units='norm',
@@ -93,7 +95,7 @@ _thisDir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(_thisDir)
 
 # Store info about the experiment session
-expName = 'FTRSG tACS'  # from the Builder filename that created this script
+expName = 'FT-RSG tACS'  # from the Builder filename that created this script
 expInfo = {u'participant': u'', 'session':["training","baseline","stimulation"]}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
 if dlg.OK == False: core.quit()  # user pressed cancel
@@ -119,7 +121,6 @@ probe_times=np.array(np.random.randint( min_probe_interval, max_probe_interval+1
 probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-20/ISI), dtype=np.int))
 probe_trials=np.append(probe_trials, ntrials)
 
-
 # Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
 filename = _thisDir + os.sep + u'data/%s_%s_%s_%s' %(expInfo['participant'], expInfo["session"], expName, expInfo['date'])
 #filename='data/test'
@@ -128,7 +129,6 @@ datafile="data.csv"
 #save a log file for detail verbose info
 logFile = logging.LogFile("Log"+'.log', level=logging.EXP)
 logging.console.setLevel(logging.WARNING)  # this outputs to the screen, not a file
-
 
 # Setup the Window
 win = visual.Window(size=(800, 600), fullscr=fullscreen, screen=0, allowGUI=False, allowStencil=False,
@@ -155,7 +155,6 @@ instruction1b = visual.TextStim(win=win, ori=0, name='text', #Talk about this at
     pos=[0, 0], height=0.07, wrapWidth=None,
     color='white', colorSpace='rgb', opacity=1,
     depth=0.0)
-
 
 instruction1c = visual.TextStim(win=win, ori=0, name='text',
     text=u'The first question will probe your state of mind prior to its appearance. If you reply "ON TASK", this means you kept your focus/thoughts on the task (your compliance with the task instructions).\n\nIf you reply "OFF TASK", this means your focus/thoughts were elsewhere(daydreaming, memories, future plans, friends etc..). You will be further asked to evaluate the content of these thoughts (about the task vs. unrelated to the task) and whether you engaged in them deliberatly or not.\n\nPress any button to continue.',    font='Arial',
@@ -193,7 +192,16 @@ real_experiment_starts=visual.TextStim(win=win, ori=0, name='text',
     color='white', colorSpace='rgb', opacity=1,
     depth=0.0)
 
-start_warning= visual.TextStim(win, text = "The experiment starting in...", pos = (0,0.2), height=0.07)
+### PROBES ###
+probe_thoughts = visual.TextStim(win, text = "Were you engaging in any thoughts prior to this probe? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
+probe_confidence = visual.TextStim(win, text = "Are you confident about your answer? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
+probe_content_1 = visual.TextStim(win, text = "Were these thoughts about the task? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
+probe_content_2 = visual.TextStim(win, text = "Were they about sensations (e.g. itching, hunger etc.) or external distractions like sounds? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
+probe_intention= visual.TextStim(win, text = "Did you deliberately engage in these thoughts? Press G for YES or H for NO.", pos = (0,0.2), height=0.07)
+
+probe_fatigue=LikertScale(win, 5,
+    instruction_text=u"Use keys 1 to 5 to assesss the degree to which you feel tired.",
+    scale_labels=[u"Not tired", "", "", "", u"Very tired"])
 
 task_stimulus=visual.TextStim(win=win, ori=0, name='text',
     text=u'+',    font='Arial',
@@ -207,7 +215,6 @@ thankyou=visual.TextStim(win=win, ori=0, name='text',
     color='white', colorSpace='rgb', opacity=1,
     depth=0.0)
 
-
 def waitforkey():
     while 1:
         keys=event.getKeys()
@@ -216,16 +223,16 @@ def waitforkey():
         elif len(keys)>0:
             break
 
-def show_probe(probe):
-    #probe.init_random()
+def show_likert_probe(probe):
     probe.show_arrow=False
     while(1):
         probe.draw()
         win.flip()
         keys=event.getKeys()
         if len(set(keys) & set(probe_keys))>0:
-            k=int(list(set(keys) & set(probe_keys))[-1])-1
+            k=int(list(set(keys) & set(probe_keys))[0])-1
             probe.set_arrow(k)
+            print(k)
             probe.draw()
             win.flip()
             time.sleep(1.0)
@@ -235,51 +242,28 @@ def show_probe(probe):
             sys.exit()
     return probe.current_pos
     
-def show_confidence_assessment(probe):
-    confidence_question= visual.TextStim(win, text = "Use the mouse to rate the confidence level you have in your answers. Press Enter to send the rating.", pos = (0,0.2), height=0.07)
+def show_probe(probe):
     while(1):
-        confidence_question.draw()
         probe.draw()
-       # event.Mouse(visible=True, newPos=None, win=win)
         win.flip()
         event.waitKeys
         keys=event.getKeys()
-        if key_confirm in keys:
-            probe.draw()
-            win.flip()
-            time.sleep(1.0)
+        if key_yes in keys:
+            return 1
+            break
+        elif key_no in keys:
+            return 0
             break
         elif quit_button in keys:
             sys.exit()
-    return probe.getRating()
     
 with open(datafile, "w") as f:
     f.write("# %s\n"%(str(expInfo)))
     f.write("subj,trial,time,stimulus,response\n")
-
-probe_task=LikertScale(win, 2,
-    instruction_text=u"Where was your attention (your thoughts) directed right before this question appeared?",
-    scale_labels=[u"ON TASK", u"OFF TASK"])
-    
-probe_content=LikertScale(win, 2,
-    instruction_text=u"Your thoughts were...",
-    scale_labels=[u"ABOUT THE TASK", u"UNRELATED TO THE TASK"])
-    
-probe_intention=LikertScale(win, 2,
-    instruction_text=u"Did you engage in these thoughts deliberately?",
-    scale_labels=[u"NO", u"YES"])
-
-probe_confidence=Slider(win,
-             ticks=(1, 100),
-             startValue = 1,
-             labels=('Not at all confident', 'Extremely confident'),
-             granularity=0.5,
-             color='white')
-probe_confidence.getMouseResponses()
     
 task_clock = core.Clock()
 trial_clock = core.Clock()
-metronome_sound = sound.Sound('A', secs=0.075)
+metronome_sound = sound.Sound(440, secs=0.075)
 #metronome_prefs = sound.Sound('A', secs=0.075 )
 metronome_sound.setVolume(1)
 
@@ -289,7 +273,6 @@ win.flip()
 time.sleep(sleeptime)
 event.getKeys()
 waitforkey()
-
 
 # first instructions part B
 instruction1b.draw()
@@ -319,14 +302,21 @@ time.sleep(sleeptime)
 event.getKeys()
 waitforkey()
 
-
-
 # first instructions part F
 instruction1f.draw()
 win.flip()
 time.sleep(sleeptime)
 event.getKeys()
 waitforkey()
+
+def add_countdown_timer(duration, message):
+    timer = core.CountdownTimer(duration)
+    message = visual.TextStim(win, text = message, pos = (0,0.2), height=0.07)
+    while timer.getTime() > 0:
+        message.draw()
+        countdown = visual.TextStim(win, round(timer.getTime(), 0))
+        countdown.draw()
+        win.flip()
 ##############################################3
 ## Training
 ##############################################3
@@ -337,12 +327,7 @@ if expInfo["session"]=="training":
     time.sleep(2)
     event.getKeys()
     waitforkey()
-    timer = core.CountdownTimer(5)
-    while timer.getTime() > 0:
-        start_warning.draw()
-        countdown = visual.TextStim(win, round(timer.getTime(), 0))
-        countdown.draw()
-        win.flip()
+    #add_countdown_timer(5, "The experiment starts in...")
 
     repeat_training=True
     while repeat_training==True:
@@ -366,12 +351,14 @@ if expInfo["session"]=="training":
                     #print current_time
                     break
 
-        response_task=show_probe(probe_task)
-        if response_task == 1:
-            response_content=show_probe(probe_content)
-            response_intention=show_probe(probe_intention)
-            response_confidence=show_confidence_assessment(probe_confidence)
-            print(response_confidence)
+        response_thoughts = show_probe(probe_thoughts)
+        if response_thoughts == 1:
+            response_content_1=show_probe(probe_content_1)
+            if response_content_1 == 0:
+                response_content_2=show_probe(probe_content_2)
+            response_intention = show_probe(probe_intention)
+        response_confidence = show_probe(probe_confidence)
+        response_fatique=show_likert_probe(probe_fatigue)
 
         ## ask for repeating the training
         training_repeat.draw()
@@ -448,12 +435,14 @@ if expInfo["session"] in ["baseline", "stimulation"]:
                 if current_time>ISI:
                     break
         else:
-            response_task=show_probe(probe_task)
-            if response_task == 1:
-                response_content=show_probe(probe_content)
-                response_intention=show_probe(probe_intention)
-                response_confidence=show_confidence_assessment(probe_confidence)
-                print(response_confidence)
+                    response_thoughts = show_probe(probe_thoughts)
+        if response_thoughts == 1:
+            response_content_1=show_probe(probe_content_1)
+            if response_content_1 == 0:
+                response_content_2=show_probe(probe_content_2)
+            response_intention = show_probe(probe_intention)
+        response_confidence = show_probe(probe_confidence)
+        response_fatique=show_likert_probe(probe_fatigue)
 #{response_content},{response_intention},{response_confidence}
 
             logtext="{subj},{trial},{time},{type},{response_task}\n".format(\
@@ -464,14 +453,7 @@ if expInfo["session"] in ["baseline", "stimulation"]:
                    # type="probe3", response_intention=response_intention, \
                    # type="probe4", response_confidence=response_confidence, \
                     time="%.10f"%(task_clock.getTime()))
-                    
-            timer = core.CountdownTimer(5)
-            restart_warning= visual.TextStim(win, text = "Place your fingers in the initial position (on G and H). The trial restarts in...", pos = (0,0.2), height=0.07)
-            while timer.getTime() > 0:
-                countdown = visual.TextStim(win, round(timer.getTime(), 0))
-                restart_warning.draw()
-                countdown.draw()
-                win.flip()
+            add_countdown_timer(5,"Place your index fingers in the initial position (on G and H). The trial restarts in...")
             
         f.write(logtext)
         f.flush()
