@@ -197,7 +197,7 @@ probe_thoughts = visual.TextStim(win, text = "Were you engaging in any thoughts 
 probe_confidence = visual.TextStim(win, text = "Are you confident about your answer? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
 probe_content_1 = visual.TextStim(win, text = "Were these thoughts about the task? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
 probe_content_2 = visual.TextStim(win, text = "Were they about sensations (e.g. itching, hunger etc.) or external distractions like sounds? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
-probe_intention= visual.TextStim(win, text = "Did you deliberately engage in these thoughts? Press G for YES or H for NO.", pos = (0,0.2), height=0.07)
+probe_intention= visual.TextStim(win, text = "Did you deliberately engage in these thoughts? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
 
 probe_fatigue=LikertScale(win, 5,
     instruction_text=u"Use keys 1 to 5 to assesss the degree to which you feel tired.",
@@ -317,6 +317,7 @@ def add_countdown_timer(duration, message):
         countdown = visual.TextStim(win, round(timer.getTime(), 0))
         countdown.draw()
         win.flip()
+
 ##############################################3
 ## Training
 ##############################################3
@@ -351,6 +352,7 @@ if expInfo["session"]=="training":
                     #print current_time
                     break
 
+        probe_timer = core.Clock()
         response_thoughts = show_probe(probe_thoughts)
         if response_thoughts == 1:
             response_content_1=show_probe(probe_content_1)
@@ -359,6 +361,12 @@ if expInfo["session"]=="training":
             response_intention = show_probe(probe_intention)
         response_confidence = show_probe(probe_confidence)
         response_fatique=show_likert_probe(probe_fatigue)
+        print(probe_timer.getTime())
+        if probe_timer.getTime() < 20:
+            wait_time = 5 + 20 - probe_timer.getTime()
+        else:
+             wait_time = 5
+        add_countdown_timer(wait_time,"Place your index fingers in the initial position (on G and H). The trial restarts in...")
 
         ## ask for repeating the training
         training_repeat.draw()
@@ -435,26 +443,30 @@ if expInfo["session"] in ["baseline", "stimulation"]:
                 if current_time>ISI:
                     break
         else:
-                    response_thoughts = show_probe(probe_thoughts)
-        if response_thoughts == 1:
-            response_content_1=show_probe(probe_content_1)
-            if response_content_1 == 0:
-                response_content_2=show_probe(probe_content_2)
-            response_intention = show_probe(probe_intention)
-        response_confidence = show_probe(probe_confidence)
-        response_fatique=show_likert_probe(probe_fatigue)
+            probe_timer = core.Clock()
+            response_thoughts = show_probe(probe_thoughts)
+            if response_thoughts == 1:
+                response_content_1=show_probe(probe_content_1)
+                if response_content_1 == 0:
+                    response_content_2=show_probe(probe_content_2)
+                response_intention = show_probe(probe_intention)
+            response_confidence = show_probe(probe_confidence)
+            response_fatique=show_likert_probe(probe_fatigue)
 #{response_content},{response_intention},{response_confidence}
 
-            logtext="{subj},{trial},{time},{type},{response_task}\n".format(\
+            logtext="{subj},{trial},{time},{type},{response}\n".format(\
                     trial=trial,\
                     subj=expInfo['participant'], \
-                    type="probe1", response_task=response_task, \
+                    type="probe1", response=response, \
+                    time="%.10f"%(task_clock.getTime()))
                     #type="probe2", response_content=response_content, \
                    # type="probe3", response_intention=response_intention, \
                    # type="probe4", response_confidence=response_confidence, \
-                    time="%.10f"%(task_clock.getTime()))
-            add_countdown_timer(5,"Place your index fingers in the initial position (on G and H). The trial restarts in...")
-            
+            if probe_timer.getTime() < 25:
+                wait_time = 5 + 25 - probe_timer.getTime()
+            else:
+                wait_time = 5
+            add_countdown_timer(wait_time,"Place your index fingers in the initial position (on G and H). The trial restarts in...")
         f.write(logtext)
         f.flush()
 
