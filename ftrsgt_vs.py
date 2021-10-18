@@ -1,11 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 from __future__ import division  # so that 1/3=0.333 instead of 1/3=0
-from emoji import emojize
 from psychopy import prefs
 prefs.hardware['audioLib'] = ['PTB']
 from psychopy import visual, core, data, event, logging, sound, gui, clock
-from psychopy.visual.slider import Slider
 from psychopy.constants import *  # things like STARTED, FINISHED
 import numpy as np  # whole numpy lib is available, prepend 'np.'
 import time
@@ -16,7 +14,7 @@ import sys
 
 
 ## global variables
-fullscreen=False
+fullscreen=True
 quit_button="escape"
 #key_confirm="return"
 key_left="s" 
@@ -145,7 +143,7 @@ else:
 
 # Initialize components for Routine "instruction"
 instruction1 = visual.TextStim(win=win, ori=0, name='text',
-	text=u'Place your left index finger on S and your right index finger on L.\n Please hold this position during the entire experiment.\n\nDuring the experiment, you will hear a tone playing in a set rhythm.\nYour task is to try and press the buttons in a random sequence of S/L presses to the rhythm of the tone.\n\nTry to press the buttons synchronously with the tone and as accurately as possible.\nYou may only press ONE of the buttons at a time.\n\nPress any key to continue.',    font='Arial',
+	text=u'Place your left index finger on S and your right index finger on L.\n Please hold this position during the entire experiment.\n\nDuring the experiment, you will hear a tone playing in a set rhythm.\nYour task is to try and press the buttons in a random sequence of S/L presses to the rhythm of the tone.\n\nTry to replicate the rhythm of the tone as accurately as possible.\nYou may only press ONE of the buttons at a time.\n\nPress any key to continue.',    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
@@ -435,6 +433,7 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
+			add_countdown_timer(3, "Place your index fingers on S and L. The trial restarts in...")
 
 
 			task_stimulus.draw()
