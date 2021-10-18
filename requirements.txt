@@ -1,0 +1,4 @@
+psychopy
+numpy
+os
+sys
