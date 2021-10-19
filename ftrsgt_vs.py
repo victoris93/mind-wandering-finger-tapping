@@ -22,7 +22,7 @@ key_right="l"
 key_yes = "y"
 key_no = "n"
 probe_keys=["1","2", "3", "4", "5"]
-n_trials_training_session=2
+n_trials_training_session=10
 ISI = 0.75
 sleeptime=0 # 5
 stimcolor="white"
@@ -102,8 +102,8 @@ expInfo['expName'] = expName
 
 
 ## duration for baseline
-session_duration=1*60 # in s
-num_probes=2
+session_duration=3*60 # in s
+num_probes=3
 
 # overwrite in case of real stimulation session
 if expInfo["session"]=="stimulation":
