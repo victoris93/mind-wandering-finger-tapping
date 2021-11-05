@@ -14,10 +14,10 @@ import sys
 import master8 as m
 import threading
 
-TMS = m.Master8('/dev/cu.usbserial-14240')
+TMS = m.Master8('/dev/cu.usbserial-141120')
 TMS.changeChannelMode(1, "G")
 print(TMS.connected)
-
+TMS.trigger(1)
 ## global variables
 fullscreen=False
 quit_button="escape"
@@ -111,8 +111,8 @@ num_probes=3
 
 # overwrite in case of real stimulation session
 if expInfo["session"]=="stimulation":
-	session_duration=3*60 # in s
-	num_probes=3
+	session_duration=20*60 # in s
+	num_probes=20
 
 min_probe_interval=30 # in s
 max_probe_interval=60 # in s
@@ -125,9 +125,6 @@ probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-num_probes
 probe_trials=np.append(probe_trials, ntrials)
 stim_times = np.append(probe_trials[0], np.diff(probe_trials)) * ISI
 
-print("STIMULATION TIMES: ", stim_times)
-print("PROBE TRIALS: ", probe_trials)
-print("PROBE TIMES: ", probe_times)
 # Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
 
 def make_interval_array(T, minInterval, maxInterval):
@@ -391,7 +388,6 @@ if expInfo["session"]=="training":
 			elif quit_button in keys:
 				sys.exit()
 
-
 ##############################################3
 ## Experiment starts
 ##############################################3
@@ -412,11 +408,10 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 
 	# official session start
 	task_clock.reset()
-	
 	if 	expInfo["session"] == "stimulation":
 		rTMS_interval_index = 1
 		if __name__ == "__main__":
-			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], task_clock.getTime(), datafile, expInfo['participant']))
+			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], task_clock.getTime(), datafile, expInfo["participant"]))
 			rTMS_Thread.start()
 	for trial in range(ntrials):
 		trial_clock.reset()
@@ -424,7 +419,6 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 		if trial not in probe_trials:
 			metronome_sound.play()
 			stimulus_time = task_clock.getTime()
-			print(stimulus_time)
 			logtext="{subj},{trial},{time},{type},{response}\n".format( \
 				trial=trial,\
 				subj=expInfo['participant'], \
@@ -466,9 +460,9 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 			f.write(logtext)
 			f.flush()
 			add_countdown_timer(3, "Place your index fingers on S and L. The trial restarts in...")
-			if 	(expInfo["session"] == "stimulation" and i < len(pulse_intervals)):
+			if 	(expInfo["session"] == "stimulation" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
-					rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[rTMS_interval_index], task_clock.getTime(), datafile, expInfo['participant']))
+					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], task_clock.getTime(), datafile, expInfo["participant"]))
 					rTMS_Thread.start() 
 				task_stimulus.draw()
 				win.flip()
