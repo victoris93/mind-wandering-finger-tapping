@@ -14,9 +14,9 @@ import sys
 import master8 as m
 import threading
 
-#TMS = m.Master8('/dev/cu.usbserial-14240')
-#TMS.changeChannelMode(1, "G")
-#print(TMS.connected)
+TMS = m.Master8('/dev/cu.usbserial-14240')
+TMS.changeChannelMode(1, "G")
+print(TMS.connected)
 
 ## global variables
 fullscreen=False
@@ -111,8 +111,8 @@ num_probes=3
 
 # overwrite in case of real stimulation session
 if expInfo["session"]=="stimulation":
-	session_duration=20*60 # in s
-	num_probes=20
+	session_duration=3*60 # in s
+	num_probes=3
 
 min_probe_interval=30 # in s
 max_probe_interval=60 # in s
@@ -120,9 +120,14 @@ max_probe_interval=60 # in s
 ## randomization
 ntrials=int(session_duration/ISI)
 probe_times=np.array(np.random.randint(min_probe_interval, max_probe_interval+1, num_probes-1)/ISI, dtype=np.int)
+
 probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-num_probes/ISI), dtype=np.int))
 probe_trials=np.append(probe_trials, ntrials)
+stim_times = np.append(probe_trials[0], np.diff(probe_trials)) * ISI
 
+print("STIMULATION TIMES: ", stim_times)
+print("PROBE TRIALS: ", probe_trials)
+print("PROBE TIMES: ", probe_times)
 # Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
 
 def make_interval_array(T, minInterval, maxInterval):
@@ -133,16 +138,16 @@ def make_interval_array(T, minInterval, maxInterval):
 	return interval_array[:-1]
 
 pulse_intervals = []		
-for task_period in probe_times:
+for task_period in stim_times:
 	pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to a period before the following probe
 	
-def rTMS(interval_array, current_task_time, outputFile, participant): #add tms object later
+def rTMS(tms, interval_array, current_task_time, outputFile, participant): #add tms object later
 	pulse_num = 1
 	TMSclock = core.Clock()
 	TMSclock.add(-1 * current_task_time)
 	for interval in interval_array:
 		time.sleep(interval)
-		#tms.trigger(1)
+		tms.trigger(1)
 		print("PULSE: ", TMSclock.getTime())
 		logtext="{subj},{trial},{time},{type},{response}\n".format( \
 						trial=pulse_num,\
@@ -391,7 +396,6 @@ if expInfo["session"]=="training":
 ## Experiment starts
 ##############################################3
 if expInfo["session"] in ["baseline", "stimulation"]:
-		
 	real_experiment_starts.draw()
 	win.flip()
 	time.sleep(sleeptime)
@@ -410,9 +414,9 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 	task_clock.reset()
 	
 	if 	expInfo["session"] == "stimulation":
-		i = 1
+		rTMS_interval_index = 1
 		if __name__ == "__main__":
-			rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[0], task_clock.getTime(), datafile, expInfo['participant']))
+			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], task_clock.getTime(), datafile, expInfo['participant']))
 			rTMS_Thread.start()
 	for trial in range(ntrials):
 		trial_clock.reset()
@@ -462,14 +466,14 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 			f.write(logtext)
 			f.flush()
 			add_countdown_timer(3, "Place your index fingers on S and L. The trial restarts in...")
-			if 	expInfo["session"] == "stimulation":
+			if 	(expInfo["session"] == "stimulation" and i < len(pulse_intervals)):
 				if __name__ == "__main__":
-					rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[i], task_clock.getTime(), datafile, expInfo['participant']))
+					rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[rTMS_interval_index], task_clock.getTime(), datafile, expInfo['participant']))
 					rTMS_Thread.start() 
 				task_stimulus.draw()
 				win.flip()
 				time.sleep(ISI)
-				i += 1
+				rTMS_interval_index += 1
 			else:
 				task_stimulus.draw()
 				win.flip()
