@@ -7,6 +7,7 @@ On Mac:
 `pip install -r requirements.txt` or `pip3 install -r requirements.txt`
 
 ## To make sure TMS pulses are delivered
+Device used: Magstim Rapid2 triggered via [A.M.P.I. Master-8](https://www.ampi.co.il/master-8).
 
 1. Before plugging in Master-8 in a USB port, retrieve the list of addresses of all the devices associated with the Mac: `ls /dev`
 2. Plug in Master-8.
