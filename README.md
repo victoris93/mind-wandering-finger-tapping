@@ -20,4 +20,4 @@ On Mac:
 3. Verify that you are operating in the intended directory by typing `ls` and pressing Enter. Terminal will retrieve the content of the said directory.
 4. Clone this repository to the directory like so: `git clone https://github.com/victoris93/mind-wandering-finger-tapping.git`
 5. Go the to the cloned repository like so: `cd mind-wandering-finger-tapping`.
-6. To launch the task script, type `python ftrsgt_vs.py` and press Enter.
+6. To launch the task script, type `python ftrsgt_vs.py` (with TMS: `python rTMS_ftrsgt_vs.py`) and press Enter.
