@@ -13,15 +13,28 @@ import os  # handy system and path functions
 import sys
 import master8 as m
 import threading
+from pyfirmata import Arduino, util
 
-TMS = m.Master8('/dev/cu.usbserial-141120')
-TMS.changeChannelMode(1, "G")
-print(TMS.connected)
-TMS.trigger(1)
+#Assigning triggers to pins via Arduino UNO
+ArduinoBoard = Arduino('/dev/ttyACM1')
+left_key_pin = ArduinoBoard.get_pin('d:2:o') # S1
+right_key_pin = ArduinoBoard.get_pin('d:3:o') 
+tms_pin = ArduinoBoard.get_pin('d:4:o')
+probe_pin = ArduinoBoard.get_pin('d:5:o')
+probe_response_pin = ArduinoBoard.get_pin('d:6:o')
+stimulus_pin = ArduinoBoard.get_pin('d:7:o')
+
+def eeg_trigger(pin):
+	pin.write(1)
+	pin.write(0) 
+
+#TMS = m.Master8('/dev/cu.usbserial-141120')
+#TMS.changeChannelMode(1, "G")
+#print(TMS.connected)
+
 ## global variables
 fullscreen=False
 quit_button="escape"
-#key_confirm="return"
 key_left="s" 
 key_right="l" 
 key_yes = "y"
@@ -269,6 +282,7 @@ def show_probe(probe):
 		win.flip()
 		keys=event.getKeys()
 		if len(set(keys) & set(probe_keys))>0:
+			eeg_trigger(probe_response_pin)
 			k=int(list(set(keys) & set(probe_keys))[0])-1
 			probe.set_arrow(k)
 			probe.draw()
@@ -413,11 +427,13 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 		if __name__ == "__main__":
 			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], task_clock.getTime(), datafile, expInfo["participant"]))
 			rTMS_Thread.start()
+			eeg_trigger(tms_pin)
 	for trial in range(ntrials):
 		trial_clock.reset()
 
 		if trial not in probe_trials:
 			metronome_sound.play()
+			eeg_trigger(stimulus_pin)
 			stimulus_time = task_clock.getTime()
 			logtext="{subj},{trial},{time},{type},{response}\n".format( \
 				trial=trial,\
@@ -432,6 +448,10 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 				if quit_button in keys:
 					sys.exit()
 				if len(keys)>0:
+					if key_left in keys:
+						eeg_trigger(left_key_pin)
+					elif key_right in keys:
+						eeg_trigger(right_key_pin)
 					logtext="{subj},{trial},{time},{type},{response}\n".format( \
 						trial=trial,\
 						subj=expInfo['participant'], \
@@ -443,6 +463,7 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 				if current_time>ISI:
 					break
 		else:
+			eeg_trigger(probe_pin)
 			response_task=show_probe(probe_task)
 			logtext="{subj},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
@@ -451,6 +472,7 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
+			eeg_trigger(probe_pin)
 			response_confidence=show_probe(probe_confidence)
 			logtext="{subj},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
