@@ -15,22 +15,28 @@ import master8 as m
 import threading
 from pyfirmata import Arduino, util
 
-#Assigning triggers to pins via Arduino UNO
+Assigning triggers to pins via Arduino UNO
 ArduinoBoard = Arduino('/dev/ttyACM1')
-left_key_pin = ArduinoBoard.get_pin('d:2:o') # S1
-right_key_pin = ArduinoBoard.get_pin('d:3:o') 
-tms_pin = ArduinoBoard.get_pin('d:4:o')
-probe_pin = ArduinoBoard.get_pin('d:5:o')
-probe_response_pin = ArduinoBoard.get_pin('d:6:o')
-stimulus_pin = ArduinoBoard.get_pin('d:7:o')
+task_start_pin = [ArduinoBoard.get_pin('d:2:o')]
+left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
+right_key_pin = [ArduinoBoard.get_pin('d:4:o')] 
+tms_pin = [ArduinoBoard.get_pin('d:5:o')]
+probe_pin = [ArduinoBoard.get_pin('d:6:o')]
+probe_response_pin_1 = [ArduinoBoard.get_pin('d:1:o'), ArduinoBoard.get_pin('d:2:o')]
+probe_response_pin_2 = [ArduinoBoard.get_pin('d:2:o'), ArduinoBoard.get_pin('d:3:o')]
+probe_response_pin_3 = [ArduinoBoard.get_pin('d:3:o'), ArduinoBoard.get_pin('d:4:o')]
+probe_response_pin_4 = [ArduinoBoard.get_pin('d:4:o'), ArduinoBoard.get_pin('d:5:o')]
+stimulus_pin = [ArduinoBoard.get_pin('d:7:o')]
 
-def eeg_trigger(pin):
-	pin.write(1)
-	pin.write(0) 
+def eeg_trigger(pins):
+	for pin in pins:
+		pin.write(1)
+	for pin in pins:
+		pin.write(0) 
 
-#TMS = m.Master8('/dev/cu.usbserial-141120')
-#TMS.changeChannelMode(1, "G")
-#print(TMS.connected)
+TMS = m.Master8('/dev/cu.usbserial-141120')
+TMS.changeChannelMode(1, "G")
+print(TMS.connected)
 
 ## global variables
 fullscreen=False
@@ -39,7 +45,7 @@ key_left="s"
 key_right="l" 
 key_yes = "y"
 key_no = "n"
-probe_keys=["1","2", "3", "4", "5"]
+probe_keys=["1","2", "3", "4"]
 n_trials_training_session=10
 ISI = 0.75
 sleeptime=0 # 5
@@ -158,7 +164,7 @@ def rTMS(tms, interval_array, current_task_time, outputFile, participant): #add 
 	for interval in interval_array:
 		time.sleep(interval)
 		tms.trigger(1)
-		print("PULSE: ", TMSclock.getTime())
+		eeg_trigger(tms_pin)
 		logtext="{subj},{trial},{time},{type},{response}\n".format( \
 						trial=pulse_num,\
 						subj=participant, \
@@ -241,19 +247,22 @@ real_experiment_starts=visual.TextStim(win=win, ori=0, name='text',
 	depth=0.0)
 
 ### PROBES ###
-#probe_thoughts = visual.TextStim(win, text = "Were you engaging in any thoughts prior to this probe? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
-# probe_confidence = visual.TextStim(win, text = "Are you confident about your answer? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
-# probe_content_1 = visual.TextStim(win, text = "Were these thoughts about the task? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
-# probe_content_2 = visual.TextStim(win, text = "Were they about sensations (e.g. itching, hunger etc.) or external distractions like sounds? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
-# probe_intention= visual.TextStim(win, text = "Did you deliberately engage in these thoughts? Press Y for YES or N for NO.", pos = (0,0.2), height=0.07)
 
-probe_task=LikertScale(win, 3,
-	instruction_text=u"Which sentence best describes your state prior to this probe? Use keys 1 to 3 to respond.",
-	scale_labels=["On task", "Off task,\nbut trying to concetrate", "Off task, \nand not trying to concentrate"])
+probe_task=LikertScale(win, 4,
+	instruction_text=u"To what extent were you on task? Use keys 1 to 4 to respond.",
+	scale_labels=["Completely on-task", "", "", "Completely off-task"])
 
-probe_confidence=LikertScale(win, 5,
+# probe_task=LikertScale(win, 3,
+# 	instruction_text=u"Which sentence best describes your state prior to this probe? Use keys 1 to 3 to respond.",
+# 	scale_labels=["On task", "Off task,\nbut trying to concetrate", "Off task, \nand not trying to concentrate"])
+
+probe_intention=LikertScale(win, 2,
+	instruction_text=u"Did you intend to stay on task? Use keys 1 or 2 to respond.",
+	scale_labels=["yes", "no"])
+
+probe_confidence=LikertScale(win, 4,
 	instruction_text=u"How confident are you about your answer? Use keys 1 to 6 to respond.",
-	scale_labels=["Not at all confident", "", "", "", "Very confident"])
+	scale_labels=["Not at all confident", "", "", "Very confident"])
 
 task_stimulus=visual.TextStim(win=win, ori=0, name='text',
 	text=u'+',    font='Arial',
@@ -275,14 +284,23 @@ def waitforkey():
 		elif len(keys)>0:
 			break
 
-def show_probe(probe):
+	
+def show_probe(probe, eeg = False):
 	probe.show_arrow=False
 	while(1):
 		probe.draw()
 		win.flip()
 		keys=event.getKeys()
 		if len(set(keys) & set(probe_keys))>0:
-			eeg_trigger(probe_response_pin)
+			if eeg == True:
+				if "1" in keys:
+					eeg_trigger(probe_response_pin_1)
+				elif "2" in keys:
+					eeg_trigger(probe_response_pin_2)
+				elif "3" in keys:
+					eeg_trigger(probe_response_pin_3)
+				elif "4" in keys:
+					eeg_trigger(probe_response_pin_4)
 			k=int(list(set(keys) & set(probe_keys))[0])-1
 			probe.set_arrow(k)
 			probe.draw()
@@ -300,7 +318,7 @@ with open(datafile, "w") as f:
 	
 task_clock = core.Clock()
 trial_clock = core.Clock()
-metronome_sound = sound.Sound('A', secs=0.075)
+metronome_sound = sound.Sound('A', secs=0.075, octave = 3)
 metronome_sound.setVolume(1)
 
 # first instructions
@@ -378,10 +396,10 @@ if expInfo["session"]=="training":
 				if quit_button in keys:
 					sys.exit()
 				if current_time>ISI:
-					#print current_time
 					break
 
 		response_task = show_probe(probe_task)
+		response_intention = show_probe(probe_intention)
 		response_confidence = show_probe(probe_confidence)
 		
 		## ask for repeating the training
@@ -411,10 +429,9 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 	time.sleep(sleeptime)
 	event.getKeys()
 	waitforkey()
-#	add_countdown_timer(5, "The experiment starts in...")
-
 	# stimulus shown during auditory beeps
 	task_stimulus.draw()
+	eeg_trigger(task_start_pin)
 	win.flip()
 
 	time.sleep(0.5)
@@ -427,7 +444,6 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 		if __name__ == "__main__":
 			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], task_clock.getTime(), datafile, expInfo["participant"]))
 			rTMS_Thread.start()
-			eeg_trigger(tms_pin)
 	for trial in range(ntrials):
 		trial_clock.reset()
 
@@ -469,6 +485,15 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 					trial=trial,\
 					subj=expInfo['participant'], \
 					type="probe_task", response= response_task, \
+					time="%.10f"%(task_clock.getTime()))
+			f.write(logtext)
+			f.flush()
+			eeg_trigger(probe_pin)
+			response_intention=show_probe(probe_intention)
+			logtext="{subj},{trial},{time},{type},{response}\n".format(\
+					trial=trial,\
+					subj=expInfo['participant'], \
+					type="probe_intention", response= response_intention, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
