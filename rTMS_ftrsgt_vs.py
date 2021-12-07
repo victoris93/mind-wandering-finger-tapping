@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from __future__ import division  # so that 1/3=0.333 instead of 1/3=0
 from psychopy import prefs
@@ -15,28 +15,31 @@ import master8 as m
 import threading
 from pyfirmata import Arduino, util
 
-Assigning triggers to pins via Arduino UNO
-ArduinoBoard = Arduino('/dev/ttyACM1')
-task_start_pin = [ArduinoBoard.get_pin('d:2:o')]
-left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
-right_key_pin = [ArduinoBoard.get_pin('d:4:o')] 
-tms_pin = [ArduinoBoard.get_pin('d:5:o')]
-probe_pin = [ArduinoBoard.get_pin('d:6:o')]
-probe_response_pin_1 = [ArduinoBoard.get_pin('d:1:o'), ArduinoBoard.get_pin('d:2:o')]
-probe_response_pin_2 = [ArduinoBoard.get_pin('d:2:o'), ArduinoBoard.get_pin('d:3:o')]
-probe_response_pin_3 = [ArduinoBoard.get_pin('d:3:o'), ArduinoBoard.get_pin('d:4:o')]
-probe_response_pin_4 = [ArduinoBoard.get_pin('d:4:o'), ArduinoBoard.get_pin('d:5:o')]
-stimulus_pin = [ArduinoBoard.get_pin('d:7:o')]
+eeg = False
+
+# Assigning triggers to pins via Arduino UNO
+
+# ArduinoBoard = Arduino('/dev/ttyACM0')
+# task_start_pin = [ArduinoBoard.get_pin('d:2:o')]
+# left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
+# right_key_pin = [ArduinoBoard.get_pin('d:4:o')] 
+# tms_pin = [ArduinoBoard.get_pin('d:5:o')]
+# probe_pin = [ArduinoBoard.get_pin('d:6:o')]
+# probe_response_pin_1 = [ArduinoBoard.digital[2], ArduinoBoard.digital[3]]
+# probe_response_pin_2 = [ArduinoBoard.digital[3], ArduinoBoard.digital[4]]
+# probe_response_pin_3 = [ArduinoBoard.digital[4], ArduinoBoard.digital[5]]
+# probe_response_pin_4 = [ArduinoBoard.digital[5], ArduinoBoard.digital[6]]
+# stimulus_pin = [ArduinoBoard.get_pin('d:7:o')]
 
 def eeg_trigger(pins):
 	for pin in pins:
 		pin.write(1)
 	for pin in pins:
-		pin.write(0) 
+		pin.write(0)
 
-TMS = m.Master8('/dev/cu.usbserial-141120')
-TMS.changeChannelMode(1, "G")
-print(TMS.connected)
+# TMS = m.Master8('/dev/ttyUSB0')
+# TMS.changeChannelMode(1, "G")
+# print(TMS.connected)
 
 ## global variables
 fullscreen=False
@@ -45,7 +48,8 @@ key_left="s"
 key_right="l" 
 key_yes = "y"
 key_no = "n"
-probe_keys=["1","2", "3", "4"]
+task_probe_keys=["1","2", "3", "4"]
+intention_probe_keys = ["1", "2"]
 n_trials_training_session=10
 ISI = 0.75
 sleeptime=0 # 5
@@ -90,7 +94,10 @@ class LikertScale:
 	def set_arrow(self, pos):
 		self.current_pos=pos
 		v=self.arrow_v.copy()
-		v[:,0]+=self.ticks[pos]
+		try:
+			v[:,0]+=self.ticks[pos]
+		except:
+			pass
 		self.arrow.setVertices(v)
 		self.show_arrow=True
 
@@ -117,7 +124,7 @@ thisDir = os.getcwd()
 
 # Store info about the experiment session
 expName = 'FT-RSGT-rTMS'  # from the Builder filename that created this script
-expInfo = {"participant": '', 'session':["training","baseline","stimulation"]}
+expInfo = {"participant": '', 'session':["training","baseline","stimulation"], "EEG":["Select", "Yes", "No"]}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
 if dlg.OK == False: core.quit()  # user pressed cancel
 expInfo['date'] = data.getDateStr()  # add a simple timestamp
@@ -127,11 +134,26 @@ expInfo['expName'] = expName
 ## duration for baseline
 session_duration=3*60 # in s
 num_probes=3
+if expInfo["EEG"]=="Yes":
+	eeg = True
 
+def make_interval_array(T, minInterval, maxInterval):
+	interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
+	while np.cumsum(interval_array)[-1] <= T:
+			nextInterval = np.random.uniform(minInterval, maxInterval)
+			interval_array = np.append(interval_array, nextInterval)
+	return interval_array[:-1]
+	
 # overwrite in case of real stimulation session
 if expInfo["session"]=="stimulation":
 	session_duration=20*60 # in s
 	num_probes=20
+	TMS = m.Master8('/dev/ttyUSB0')
+	TMS.changeChannelMode(1, "G")
+	
+	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment		
+	for task_period in stim_times:
+		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to a period before the following probe
 
 min_probe_interval=30 # in s
 max_probe_interval=60 # in s
@@ -143,28 +165,16 @@ probe_times=np.array(np.random.randint(min_probe_interval, max_probe_interval+1,
 probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-num_probes/ISI), dtype=np.int))
 probe_trials=np.append(probe_trials, ntrials)
 stim_times = np.append(probe_trials[0], np.diff(probe_trials)) * ISI
-
-# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
-
-def make_interval_array(T, minInterval, maxInterval):
-	interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
-	while np.cumsum(interval_array)[-1] <= T:
-			nextInterval = np.random.uniform(minInterval, maxInterval)
-			interval_array = np.append(interval_array, nextInterval)
-	return interval_array[:-1]
-
-pulse_intervals = []		
-for task_period in stim_times:
-	pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to a period before the following probe
 	
-def rTMS(tms, interval_array, current_task_time, outputFile, participant): #add tms object later
+def rTMS(tms, interval_array, current_task_time, outputFile, participant, eeg = eeg): #add tms object later
 	pulse_num = 1
 	TMSclock = core.Clock()
 	TMSclock.add(-1 * current_task_time)
 	for interval in interval_array:
 		time.sleep(interval)
 		tms.trigger(1)
-		eeg_trigger(tms_pin)
+		if eeg == True:
+			eeg_trigger(tms_pin)
 		logtext="{subj},{trial},{time},{type},{response}\n".format( \
 						trial=pulse_num,\
 						subj=participant, \
@@ -199,7 +209,7 @@ else:
 
 # Initialize components for Routine "instruction"
 instruction1 = visual.TextStim(win=win, ori=0, name='text',
-	text=u'Place your left index finger on S and your right index finger on L.\n Please hold this position during the entire experiment.\n\nDuring the experiment, you will hear a tone playing in a set rhythm.\nYour task is to try and press the buttons in a random sequence of S/L presses to the rhythm of the tone.\n\nTry to replicate the rhythm of the tone as accurately as possible.\nYou may only press ONE of the buttons at a time.\n\nPress any key to continue.',    font='Arial',
+	text=u'Place your left index finger on S and your right index finger on L.\n Please hold this position during the entire experiment.\n\nDuring the experiment, you will hear a tone playing in a set rhythm.\nYour task is to try and press the buttons in a random sequence of left/right presses to the rhythm of the tone. Try to make this sequence as unpredictable as possible. For example: "left-right-left-right-left" is more predictable than "left-left-right-left-right"\n\nTry to replicate the rhythm of the tone as accurately as possible.\nYou may only press ONE of the buttons at a time.\n\nPress any key to continue.',    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
@@ -211,7 +221,7 @@ instruction1b = visual.TextStim(win=win, ori=0, name='text', #Talk about this at
 	depth=0.0)
 
 instruction1c = visual.TextStim(win=win, ori=0, name='text',
-	text='The first question will probe your state of mind prior to its appearance. If you reply "On task", this means you kept your focus/thoughts on the task (your compliance with the task instructions).\n\nIf you reply "Off-task, but trying to concentrate", this means your focus/thoughts unintentionally drifted elsewhere(daydreaming, memories, future plans, friends etc..).\n\nHowever, if you reply "Off-task, and not trying to concentrate", this means you intentionally engaged in these thoughts (which is fine :)). You will be further asked to assess how confident you feel about your answer on the scale of 1 to 5.\n\n Press any key to continue.',    font='Arial',
+	text='The first question will ask you to evaluate your state of mind prior to the appearance of the question. You will have to choose a score on the scale of 1 ("completely on-task") to 4 ("completely off-task"). Next, you will be asked whether you intentionally tried to concentrate or not. Finally, you will be asked to evaluate the degree of confidence of your answers on the scale on 1 to 4. \n\n Press any key to continue.',    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
@@ -285,8 +295,10 @@ def waitforkey():
 			break
 
 	
-def show_probe(probe, eeg = False):
+def show_probe(probe, probe_keys, eeg = eeg):
 	probe.show_arrow=False
+	if eeg == True:
+		eeg_trigger(probe_pin)
 	while(1):
 		probe.draw()
 		win.flip()
@@ -314,11 +326,11 @@ def show_probe(probe, eeg = False):
 	
 with open(datafile, "w") as f:
 	f.write("# %s\n"%(str(expInfo)))
-	f.write("subj,trial,time,stimulus, tms_onset, response\n")
+	f.write("subj, EEG,trial,time, stimulus, response\n")
 	
 task_clock = core.Clock()
 trial_clock = core.Clock()
-metronome_sound = sound.Sound('A', secs=0.075, octave = 3)
+metronome_sound = sound.Sound('A', secs=0.075)
 metronome_sound.setVolume(1)
 
 # first instructions
@@ -398,9 +410,9 @@ if expInfo["session"]=="training":
 				if current_time>ISI:
 					break
 
-		response_task = show_probe(probe_task)
-		response_intention = show_probe(probe_intention)
-		response_confidence = show_probe(probe_confidence)
+		response_task = show_probe(probe_task, task_probe_keys)
+		response_intention = show_probe(probe_intention, intention_probe_keys)
+		response_confidence = show_probe(probe_confidence, task_probe_keys)
 		
 		## ask for repeating the training
 		training_repeat.draw()
@@ -431,7 +443,7 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 	waitforkey()
 	# stimulus shown during auditory beeps
 	task_stimulus.draw()
-	eeg_trigger(task_start_pin)
+# 	eeg_trigger(task_start_pin)
 	win.flip()
 
 	time.sleep(0.5)
@@ -439,21 +451,23 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 
 	# official session start
 	task_clock.reset()
-	if 	expInfo["session"] == "stimulation":
-		rTMS_interval_index = 1
-		if __name__ == "__main__":
-			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], task_clock.getTime(), datafile, expInfo["participant"]))
-			rTMS_Thread.start()
+# 	if 	expInfo["session"] == "stimulation":
+# 		rTMS_interval_index = 1
+# 		if __name__ == "__main__":
+# 			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], task_clock.getTime(), datafile, expInfo["participant"]))
+# 			rTMS_Thread.start()
 	for trial in range(ntrials):
 		trial_clock.reset()
 
 		if trial not in probe_trials:
 			metronome_sound.play()
-			eeg_trigger(stimulus_pin)
+			if eeg == True:
+				eeg_trigger(stimulus_pin)
 			stimulus_time = task_clock.getTime()
-			logtext="{subj},{trial},{time},{type},{response}\n".format( \
+			logtext="{subj}{EEG},{trial},{time},{type},{response}\n".format( \
 				trial=trial,\
 				subj=expInfo['participant'], \
+				EEG = expInfo['EEG'], \
 				type="stimulus", response="", \
 				time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
@@ -464,13 +478,15 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 				if quit_button in keys:
 					sys.exit()
 				if len(keys)>0:
-					if key_left in keys:
-						eeg_trigger(left_key_pin)
-					elif key_right in keys:
-						eeg_trigger(right_key_pin)
-					logtext="{subj},{trial},{time},{type},{response}\n".format( \
+					if eeg == True:
+						if key_left in keys:
+							eeg_trigger(left_key_pin)
+						elif key_right in keys:
+							eeg_trigger(right_key_pin)
+					logtext="{subj}{EEG},{trial},{time},{type},{response}\n".format( \
 						trial=trial,\
 						subj=expInfo['participant'], \
+						EEG = expInfo['EEG'], \
 						type="tap", response=keys[0], \
 						time="%.10f"%(task_clock.getTime()))
 					f.write(logtext)
@@ -479,29 +495,29 @@ if expInfo["session"] in ["baseline", "stimulation"]:
 				if current_time>ISI:
 					break
 		else:
-			eeg_trigger(probe_pin)
-			response_task=show_probe(probe_task)
-			logtext="{subj},{trial},{time},{type},{response}\n".format(\
+			response_task=show_probe(probe_task, task_probe_keys)
+			logtext="{subj},{EEG},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
+					EEG = expInfo['EEG'], \
 					type="probe_task", response= response_task, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
-			eeg_trigger(probe_pin)
-			response_intention=show_probe(probe_intention)
-			logtext="{subj},{trial},{time},{type},{response}\n".format(\
+			response_intention=show_probe(probe_intention, intention_probe_keys)
+			logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
+					EEG = expInfo['EEG'], \
 					type="probe_intention", response= response_intention, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
-			eeg_trigger(probe_pin)
-			response_confidence=show_probe(probe_confidence)
-			logtext="{subj},{trial},{time},{type},{response}\n".format(\
+			response_confidence=show_probe(probe_confidence, task_probe_keys)
+			logtext="{subj}{EEG},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
+					EEG = expInfo['EEG'], \
 					type="probe_confidence", response= response_confidence, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
