@@ -19,18 +19,6 @@ eeg = False
 
 # Assigning triggers to pins via Arduino UNO
 
-# ArduinoBoard = Arduino('/dev/ttyACM0')
-# task_start_pin = [ArduinoBoard.get_pin('d:2:o')]
-# left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
-# right_key_pin = [ArduinoBoard.get_pin('d:4:o')] 
-# tms_pin = [ArduinoBoard.get_pin('d:5:o')]
-# probe_pin = [ArduinoBoard.get_pin('d:6:o')]
-# probe_response_pin_1 = [ArduinoBoard.digital[2], ArduinoBoard.digital[3]]
-# probe_response_pin_2 = [ArduinoBoard.digital[3], ArduinoBoard.digital[4]]
-# probe_response_pin_3 = [ArduinoBoard.digital[4], ArduinoBoard.digital[5]]
-# probe_response_pin_4 = [ArduinoBoard.digital[5], ArduinoBoard.digital[6]]
-# stimulus_pin = [ArduinoBoard.get_pin('d:7:o')]
-
 def eeg_trigger(pins):
 	for pin in pins:
 		pin.write(1)
@@ -136,6 +124,17 @@ session_duration=3*60 # in s
 num_probes=3
 if expInfo["EEG"]=="Yes":
 	eeg = True
+	ArduinoBoard = Arduino('/dev/ttyACM0')
+	task_start_pin = [ArduinoBoard.get_pin('d:2:o')]
+	left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
+	right_key_pin = [ArduinoBoard.get_pin('d:4:o')] 
+	tms_pin = [ArduinoBoard.get_pin('d:5:o')]
+	probe_pin = [ArduinoBoard.get_pin('d:6:o')]
+	probe_response_pin_1 = [ArduinoBoard.digital[2], ArduinoBoard.digital[3]]
+	probe_response_pin_2 = [ArduinoBoard.digital[3], ArduinoBoard.digital[4]]
+	probe_response_pin_3 = [ArduinoBoard.digital[4], ArduinoBoard.digital[5]]
+	probe_response_pin_4 = [ArduinoBoard.digital[5], ArduinoBoard.digital[6]]
+	stimulus_pin = [ArduinoBoard.get_pin('d:7:o')]
 
 def make_interval_array(T, minInterval, maxInterval):
 	interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
@@ -145,15 +144,6 @@ def make_interval_array(T, minInterval, maxInterval):
 	return interval_array[:-1]
 	
 # overwrite in case of real stimulation session
-if expInfo["session"]=="stimulation":
-	session_duration=20*60 # in s
-	num_probes=20
-	TMS = m.Master8('/dev/ttyUSB0')
-	TMS.changeChannelMode(1, "G")
-	
-	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment		
-	for task_period in stim_times:
-		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to a period before the following probe
 
 min_probe_interval=30 # in s
 max_probe_interval=60 # in s
@@ -165,8 +155,18 @@ probe_times=np.array(np.random.randint(min_probe_interval, max_probe_interval+1,
 probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-num_probes/ISI), dtype=np.int))
 probe_trials=np.append(probe_trials, ntrials)
 stim_times = np.append(probe_trials[0], np.diff(probe_trials)) * ISI
+
+if expInfo["session"]=="stimulation":
+	session_duration=15*60 # in s
+	num_probes=15
+	TMS = m.Master8('/dev/ttyUSB0')
+	TMS.changeChannelMode(1, "G")
 	
-def rTMS(tms, interval_array, current_task_time, outputFile, participant, eeg = eeg): #add tms object later
+	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment		
+	for task_period in stim_times:
+		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
+	
+def rTMS(tms, interval_array, current_task_time, outputFile, participant, eeg = eeg):
 	pulse_num = 1
 	TMSclock = core.Clock()
 	TMSclock.add(-1 * current_task_time)
