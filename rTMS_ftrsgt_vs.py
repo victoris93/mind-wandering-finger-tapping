@@ -190,9 +190,10 @@ def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, 
 			tms.trigger(1)
 			if eeg == True:
 				eeg_trigger(tms_pin)
-			logtext="{subj},{trial},{time},{type},{response}\n".format( \
-						trial=pulse_num,\
+			logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format( \
 						subj=participant, \
+						EEG = eeg, \
+						trial=pulse_num,\
 						time="%.10f"%(TMSclock.getTime()), \
 						type="pulse", \
 						response = "NA")
@@ -214,9 +215,7 @@ def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, 
 		f.flush()
 
 		
-
-# Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
-filename =  thisDir+ "/data/%s_%s_%s_%s" %(expInfo['participant'], expInfo["session"], expName, expInfo['date'])
+filename =  thisDir+ "/Analyses/data/%s_%s_%s_%s" %(expInfo['participant'], expInfo["session"], expName, expInfo['date'])
 #filename='data/test'
 datafile= filename + ".csv"
 
