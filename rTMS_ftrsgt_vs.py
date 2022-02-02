@@ -3,7 +3,7 @@
 from __future__ import division  # so that 1/3=0.333 instead of 1/3=0
 from psychopy import prefs
 prefs.hardware['audioLib'] = ['PTB']
-from psychopy import visual, core, data, event, logging, sound, gui, clock, keyboard as kb
+from psychopy import visual, core, data, event, logging, sound, gui, clock
 from psychopy.constants import *  # things like STARTED, FINISHED
 import numpy as np  # whole numpy lib is available, prepend 'np.'
 import time
