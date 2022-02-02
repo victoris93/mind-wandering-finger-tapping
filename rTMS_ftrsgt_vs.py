@@ -3,7 +3,7 @@
 from __future__ import division  # so that 1/3=0.333 instead of 1/3=0
 from psychopy import prefs
 prefs.hardware['audioLib'] = ['PTB']
-from psychopy import visual, core, data, event, logging, sound, gui, clock
+from psychopy import visual, core, data, event, logging, sound, gui, clock, keyboard as kb
 from psychopy.constants import *  # things like STARTED, FINISHED
 import numpy as np  # whole numpy lib is available, prepend 'np.'
 import time
@@ -23,19 +23,16 @@ def eeg_trigger(pins):
 	for pin in pins:
 		pin.write(0)
 
-TMS = m.Master8('/dev/ttyUSB0')
-TMS.changeChannelMode(1, "G")
-#TMS.setChannelDuration("G", .001)
-#TMS.setChannelDelay("G", .001)
-
 ## global variables
 fullscreen=False
 quit_button="escape"
+key_no = "n"
+key_yes = "y"
 key_left="s" 
 key_right="l" 
 task_probe_keys=["1","2", "3", "4"]
 binary_probe_keys = ["1", "2"]
-n_trials_training_session=10
+n_trials_training_session=20
 ISI = 0.75
 sleeptime=0 # 5
 stimcolor="white"
@@ -131,7 +128,7 @@ if expInfo["EEG"]=="Yes":
 	probe_response_pin_2 = [ArduinoBoard.digital[3], ArduinoBoard.digital[4]]
 	probe_response_pin_3 = [ArduinoBoard.digital[4], ArduinoBoard.digital[5]]
 	probe_response_pin_4 = [ArduinoBoard.digital[5], ArduinoBoard.digital[6]]
-	stimulus_pin = [ArduinoBoard.get_pin('d:7:o')]
+	tone_pin = [ArduinoBoard.get_pin('d:7:o')]
 
 def make_interval_array(T, minInterval, maxInterval): # generates random intervals for TMS bursts
 	interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
@@ -296,7 +293,7 @@ probe_intention=LikertScale(win, 2,
 	scale_labels=["no", "yes"])
 
 probe_distraction=LikertScale(win, 2,
-	instruction_text=u"Were you distracted by your surroundings?",
+	instruction_text=u"Were you distracted by your surroundings? Use keys 1 or 2 to respond.",
 	scale_labels=["no", "yes"])
 
 task_stimulus=visual.TextStim(win=win, ori=0, name='text',
@@ -358,6 +355,19 @@ trial_clock = core.Clock()
 metronome_sound = sound.Sound('A', secs=0.075)
 metronome_sound.setVolume(1)
 
+# instructions = [instruction1, instruction1b, instruction1c, instruction1d]
+# 	
+# for i in range(0, len(instructions)):
+# 	instructions[i].draw()
+# 	win.flip()
+# 	keys = kb.getKeys(keyList = ["left", "right"])
+# 	if "right" in keys:
+# 		i+=1
+# 	elif ("left" in keys and i > 0):
+# 		i-=1
+# 	elif ("left" in keys and i == 0):
+# 		pass
+		
 # first instructions
 instruction1.draw()
 win.flip()
@@ -412,7 +422,7 @@ if expInfo["session"]=="training":
 	time.sleep(2)
 	event.getKeys()
 	waitforkey()
-	add_countdown_timer(5, "The training starts in...")
+	add_countdown_timer(3, "The training starts in...")
 
 	repeat_training=True
 	while repeat_training==True:
@@ -436,8 +446,8 @@ if expInfo["session"]=="training":
 					break
 
 		response_task = show_probe(probe_task, task_probe_keys)
-		response_intention = show_probe(probe_intention, intention_probe_keys)
-		response_confidence = show_probe(probe_confidence, task_probe_keys)
+		response_intention = show_probe(probe_intention, binary_probe_keys)
+		response_distraction = show_probe(probe_distraction, binary_probe_keys)
 		
 		## ask for repeating the training
 		training_repeat.draw()
@@ -452,7 +462,7 @@ if expInfo["session"]=="training":
 				break
 			elif key_yes in keys:
 				repeat_training=True
-				add_countdown_timer(5, "Place your index fingers on S and L.\nThe training restarts in...")
+				add_countdown_timer(3, "Place your index fingers on S and L.\nThe training restarts in...")
 				break
 			elif quit_button in keys:
 				sys.exit()
@@ -467,10 +477,11 @@ if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
 	event.getKeys()
 	waitforkey()
 	# stimulus shown during auditory beeps
+	
 	task_stimulus.draw()
-# 	eeg_trigger(task_start_pin)
+	if eeg == True:
+ 		eeg_trigger(task_start_pin)
 	win.flip()
-
 	time.sleep(0.5)
 	f=open(datafile, "a")
 
@@ -487,9 +498,9 @@ if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
 		if trial not in probe_trials:
 			metronome_sound.play()
 			if eeg == True:
-				eeg_trigger(stimulus_pin)
+				eeg_trigger(tone_pin)
 			stimulus_time = task_clock.getTime()
-			logtext="{subj}{EEG},{trial},{time},{type},{response}\n".format( \
+			logtext="{subj},{EEG},{trial},{time},{type},{response}\n".format( \
 				trial=trial,\
 				subj=expInfo['participant'], \
 				EEG = expInfo['EEG'], \
@@ -508,7 +519,7 @@ if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
 							eeg_trigger(left_key_pin)
 						elif key_right in keys:
 							eeg_trigger(right_key_pin)
-					logtext="{subj}{EEG},{trial},{time},{type},{response}\n".format( \
+					logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format( \
 						trial=trial,\
 						subj=expInfo['participant'], \
 						EEG = expInfo['EEG'], \
@@ -539,7 +550,7 @@ if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
 			f.write(logtext)
 			f.flush()
 			response_distraction=show_probe(probe_distraction, binary_probe_keys)
-			logtext="{subj}{EEG},{trial},{time},{type},{response}\n".format(\
+			logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
 					EEG = expInfo['EEG'], \
