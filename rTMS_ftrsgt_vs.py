@@ -14,7 +14,6 @@ import sys
 import master8 as m
 import threading
 from pyfirmata import Arduino, util
-
 eeg = False
 
 def eeg_trigger(pins):
@@ -24,13 +23,14 @@ def eeg_trigger(pins):
 		pin.write(0)
 
 ## global variables
-fullscreen=False
+fullscreen=True
 quit_button="escape"
 key_no = "n"
 key_yes = "y"
 key_left="s" 
 key_right="l" 
 task_probe_keys=["1","2", "3", "4"]
+probe_intention_keys = ["1","2", "3"]
 binary_probe_keys = ["1", "2"]
 n_trials_training_session=20
 ISI = 0.75
@@ -105,50 +105,68 @@ class LikertScale:
 thisDir = os.getcwd()
 
 # Store info about the experiment session
+#N = baseline
+#Ar = active_rhTMS
+#Sr = sham_rhTMS
+#AAr= active_arrhTMS
+#SAr = sham_aarhTMS
 expName = 'FT-RSGT-rTMS'  # from the Builder filename that created this script
-expInfo = {"participant": '', 'session':["training","baseline","rhTMS", "randTMS"], "EEG":["Select", "Yes", "No"]}
+expInfo = {"participant": '', 'session':["training","N","Ar", "Sr", "AAr", "SAr"], "EEG":["Select", "Yes", "No"]}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
 if dlg.OK == False: core.quit()  # user pressed cancel
 expInfo['date'] = data.getDateStr()  # add a simple timestamp
 expInfo['expName'] = expName
 
 ## duration for baseline
-session_duration=3*60 # in s
-num_probes=3
+session_duration=10*60 # in s
+num_probes=10
 
 if expInfo["EEG"]=="Yes":
 	eeg = True
-	ArduinoBoard = Arduino('/dev/ttyACM0') # Assigning triggers to pins via Arduino UNO
+	ArduinoBoard = Arduino('/dev/cu.usbmodem141201') # Assigning triggers to pins via Arduino UNO
 	task_start_pin = [ArduinoBoard.get_pin('d:2:o')]
 	left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
 	right_key_pin = [ArduinoBoard.get_pin('d:4:o')] 
 	tms_pin = [ArduinoBoard.get_pin('d:5:o')]
-	probe_pin = [ArduinoBoard.get_pin('d:6:o')]
+	probe_task_pin = [ArduinoBoard.get_pin('d:6:o')]
+	probe_intention_pin = [ArduinoBoard.get_pin('d:8:o')]
 	probe_response_pin_1 = [ArduinoBoard.digital[2], ArduinoBoard.digital[3]]
 	probe_response_pin_2 = [ArduinoBoard.digital[3], ArduinoBoard.digital[4]]
 	probe_response_pin_3 = [ArduinoBoard.digital[4], ArduinoBoard.digital[5]]
 	probe_response_pin_4 = [ArduinoBoard.digital[5], ArduinoBoard.digital[6]]
 	tone_pin = [ArduinoBoard.get_pin('d:7:o')]
+	if expInfo["session"] == "N":
+		session_start = [ArduinoBoard.digital[2], ArduinoBoard.digital[2], ArduinoBoard.digital[2]]
+	elif expInfo["session"] == "Ar":
+		session_start = [ArduinoBoard.digital[3], ArduinoBoard.digital[3], ArduinoBoard.digital[3]]
+	elif expInfo["session"] == "Sr":
+		session_start= [ArduinoBoard.digital[4], ArduinoBoard.digital[4], ArduinoBoard.digital[4]]
+	elif expInfo["session"] == "AAr":
+		session_start = [ArduinoBoard.digital[5], ArduinoBoard.digital[5], ArduinoBoard.digital[5]]
+	elif expInfo["session"] == "AAr":
+		session_start = [ArduinoBoard.digital[6], ArduinoBoard.digital[6], ArduinoBoard.digital[6]]
+
+
 
 def make_interval_array(T, minInterval, maxInterval): # generates random intervals for TMS bursts
 	interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
 	while np.cumsum(interval_array)[-1] +.5 <= T:
 			nextInterval = np.random.uniform(minInterval, maxInterval)
 			interval_array = np.append(interval_array, nextInterval)
-	return interval_array[:-1]
+	return interval_array[:-2] #review this IM2A
 
 min_probe_interval=30 # in s
 max_probe_interval=60 # in s
 
 ## randomization
 
-if expInfo["session"]=="rhTMS" or expInfo["session"]=="randTMS":
+if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
 	rhythmic_tms = True
-	session_duration=15*60 # in s
-	num_probes=15
-	TMS = m.Master8('/dev/ttyUSB0')
+	#session_duration=10*60 # in s
+	num_probes=10
+	TMS = m.Master8('/dev/cu.usbserial-14130')
 	TMS.changeChannelMode(1, "G")
-	if expInfo["session"]=="randTMS":
+	if expInfo["session"]=="SAr" or if expInfo["session"]=="AAr":
 		rhythmic_tms = False
 
 ntrials=int(session_duration/ISI)
@@ -169,7 +187,7 @@ def generate_random_ipi(frequency, n_pulses):
 	ipis = np.append(ipis, 1/frequency *(n_pulses-1) - sum(ipis)) # append the last ipi so that the sum of ipi equates to the duration of the burst in the rhythmic condition
 	return(ipis)
 
-if expInfo["session"]== "rhTMS" or expInfo["session"]=="randTMS":
+if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
 	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment		
 	for task_period in stim_times:
 		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
@@ -203,8 +221,9 @@ def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, 
 		if eeg == True:
 			eeg_trigger(tms_pin)
 		logtext="{subj},{trial},{time},{type},{response}\n".format( \
-						trial=pulse_num,\
 						subj=participant, \
+						EEG = eeg, \
+						trial=pulse_num,\
 						time="%.10f"%(TMSclock.getTime()), \
 						type="pulse", \
 						response = "NA")
@@ -247,7 +266,7 @@ instruction1b = visual.TextStim(win=win, ori=0, name='text', #Talk about this at
 	depth=0.0)
 
 instruction1c = visual.TextStim(win=win, ori=0, name='text',
-	text='The first question will ask you to evaluate your state of mind prior to the appearance of the question. You will have to choose a score on the scale of 1 ("completely on-task") to 4 ("completely off-task"). Next, you will be asked whether you intentionally tried to concentrate or not. Finally, you will be asked to evaluate the degree of confidence of your answers on the scale on 1 to 4. \n\n Press any key to continue.',    font='Arial',
+	text='The first question will ask you to evaluate your state of mind prior to the appearance of the question. You will have to choose a score on the scale of 1 ("completely on-task") to 4 ("completely off-task"). You will be further asked to elaborate. \n\n Press any key to continue.',    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
@@ -285,22 +304,29 @@ real_experiment_starts=visual.TextStim(win=win, ori=0, name='text',
 ### PROBES ###
 
 probe_task=LikertScale(win, 4,
-	instruction_text=u"To what extent were your thoughts related to the task? Use keys 1 to 4 to respond.",
-	scale_labels=["Not at all", "", "", "Completely"])
+	instruction_text=u"Where was your attention just prior to the probe? Use keys 1-4 to respond.",
+	scale_labels=["On-task", "", "", "Off-task"])
 
-probe_intention=LikertScale(win, 2,
-	instruction_text=u"Did you intend to stay on task? Use keys 1 or 2 to respond.",
-	scale_labels=["no", "yes"])
-
-probe_distraction=LikertScale(win, 2,
-	instruction_text=u"Were you distracted by your surroundings? Use keys 1 or 2 to respond.",
-	scale_labels=["no", "yes"])
+# probe_intention=LikertScale(win, 2,
+# 	instruction_text=u"Did you intend to stay on task? Use keys 1 or 2 to respond.",
+# 	scale_labels=["no", "yes"])
+# 
+# probe_distraction=LikertScale(win, 2,
+# 	instruction_text=u"Were you distracted by your surroundings? Use keys 1 or 2 to respond.",
+# 	scale_labels=["no", "yes"])
+	
+probe_intention= visual.TextStim(win=win, ori=0, name='text',
+	text=u'Just prior to the onset of the probe, I was:\n\n 1. Focused on the task. \n 2. Not focused on the task, but I was trying to focus on it.\n 3. Not focused on the task, but I was not trying to focus on it. \n\n Use keys 1-3 to respond.',    font='Arial',
+	pos=[0, 0], height=0.07, wrapWidth=None,
+	color='white', colorSpace='rgb', opacity=1,
+	depth=0.0)
 
 task_stimulus=visual.TextStim(win=win, ori=0, name='text',
 	text=u'+',    font='Arial',
 	pos=[0, 0], height=0.15, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
+	
 
 thankyou=visual.TextStim(win=win, ori=0, name='text',
 	text=u'All done! Thank you!',    font='Arial',
@@ -308,6 +334,30 @@ thankyou=visual.TextStim(win=win, ori=0, name='text',
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
 
+def display_probe(probe, probe_keys, pin):
+	if eeg == True and probe == probe_task:
+		eeg_trigger(probe_task_pin)
+	elif eeg == True and probe == probe_intention:
+		eeg_trigger(probe_intention_pin)
+	while(1):
+		probe.draw()
+		win.flip()
+		keys=event.getKeys()
+		if len(set(keys) & set(probe_keys))>0:
+			if eeg == True:
+				if "1" in keys:
+					eeg_trigger(probe_response_pin_1)
+				elif "2" in keys:
+					eeg_trigger(probe_response_pin_2)
+				elif "3" in keys:
+					eeg_trigger(probe_response_pin_3)
+				elif "4" in keys:
+					eeg_trigger(probe_response_pin_4)
+			break
+		elif quit_button in keys:
+			sys.exit()
+	return int(keys[0])
+	
 def waitforkey():
 	while 1:
 		keys=event.getKeys()
@@ -369,6 +419,7 @@ metronome_sound.setVolume(1)
 # 		pass
 		
 # first instructions
+
 instruction1.draw()
 win.flip()
 time.sleep(sleeptime)
@@ -446,8 +497,8 @@ if expInfo["session"]=="training":
 					break
 
 		response_task = show_probe(probe_task, task_probe_keys)
-		response_intention = show_probe(probe_intention, binary_probe_keys)
-		response_distraction = show_probe(probe_distraction, binary_probe_keys)
+		response_intention = display_probe(probe_intention, probe_intention_keys)
+		#response_distraction = show_probe(probe_distraction, binary_probe_keys)
 		
 		## ask for repeating the training
 		training_repeat.draw()
@@ -470,17 +521,16 @@ if expInfo["session"]=="training":
 ##############################################3
 ## Experiment starts
 ##############################################3
-if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
+if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 	real_experiment_starts.draw()
 	win.flip()
 	time.sleep(sleeptime)
 	event.getKeys()
 	waitforkey()
 	# stimulus shown during auditory beeps
-	
-	task_stimulus.draw()
 	if eeg == True:
- 		eeg_trigger(task_start_pin)
+				eeg_trigger(start_session_pin)
+	task_stimulus.draw()
 	win.flip()
 	time.sleep(0.5)
 	f=open(datafile, "a")
@@ -503,7 +553,7 @@ if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
 			logtext="{subj},{EEG},{trial},{time},{type},{response}\n".format( \
 				trial=trial,\
 				subj=expInfo['participant'], \
-				EEG = expInfo['EEG'], \
+				EEG = eeg, \
 				type="stimulus", response="", \
 				time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
@@ -522,7 +572,7 @@ if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
 					logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format( \
 						trial=trial,\
 						subj=expInfo['participant'], \
-						EEG = expInfo['EEG'], \
+						EEG = eeg, \
 						type="tap", response=keys[0], \
 						time="%.10f"%(task_clock.getTime()))
 					f.write(logtext)
@@ -535,29 +585,29 @@ if expInfo["session"] in ["baseline", "rhTMS", "randTMS"]:
 			logtext="{subj},{EEG},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
-					EEG = expInfo['EEG'], \
+					EEG = eeg, \
 					type="probe_task", response= response_task, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
-			response_intention=show_probe(probe_intention, binary_probe_keys)
+			response_intention=display_probe(probe_intention, probe_intention_keys)
 			logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
-					EEG = expInfo['EEG'], \
+					EEG = eeg, \
 					type="probe_intention", response= response_intention, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
-			response_distraction=show_probe(probe_distraction, binary_probe_keys)
-			logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format(\
-					trial=trial,\
-					subj=expInfo['participant'], \
-					EEG = expInfo['EEG'], \
-					type="probe_distraction", response= response_distraction, \
-					time="%.10f"%(task_clock.getTime()))
-			f.write(logtext)
-			f.flush()
+# 			response_distraction=show_probe(probe_distraction, binary_probe_keys)
+# 			logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format(\
+# 					trial=trial,\
+# 					subj=expInfo['participant'], \
+# 					EEG = eeg, \
+# 					type="probe_distraction", response= response_distraction, \
+# 					time="%.10f"%(task_clock.getTime()))
+# 			f.write(logtext)
+# 			f.flush()
 			add_countdown_timer(3, "Place your index fingers on S and L. The trial restarts in...")
 			if 	(expInfo["session"]=="rhTMS" or expInfo["session"]=="randTMS" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
