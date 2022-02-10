@@ -15,12 +15,7 @@ import master8 as m
 import threading
 from pyfirmata import Arduino, util
 eeg = False
-
-def eeg_trigger(pins):
-	for pin in pins:
-		pin.write(1)
-	for pin in pins:
-		pin.write(0)
+session_name = "training"
 
 ## global variables
 fullscreen=True
@@ -110,19 +105,27 @@ thisDir = os.getcwd()
 #Sr = sham_rhTMS
 #AAr= active_arrhTMS
 #SAr = sham_aarhTMS
-expName = 'FT-RSGT-rTMS'  # from the Builder filename that created this script
+expName = 'FT-RSGT'  # from the Builder filename that created this script
 expInfo = {"participant": '', 'session':["training","N","Ar", "Sr", "AAr", "SAr"], "EEG":["Select", "Yes", "No"]}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
 if dlg.OK == False: core.quit()  # user pressed cancel
 expInfo['date'] = data.getDateStr()  # add a simple timestamp
 expInfo['expName'] = expName
-
+if expInfo['session'] = "N":
+	session_name = "baseline"
 ## duration for baseline
 session_duration=10*60 # in s
 num_probes=10
 
 if expInfo["EEG"]=="Yes":
 	eeg = True
+	
+	def eeg_trigger(pins):
+	for pin in pins:
+		pin.write(1)
+	for pin in pins:
+		pin.write(0)
+		
 	ArduinoBoard = Arduino('/dev/cu.usbmodem141201') # Assigning triggers to pins via Arduino UNO
 	task_start_pin = [ArduinoBoard.get_pin('d:2:o')]
 	left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
@@ -146,8 +149,6 @@ if expInfo["EEG"]=="Yes":
 	elif expInfo["session"] == "AAr":
 		session_start = [ArduinoBoard.digital[6], ArduinoBoard.digital[6], ArduinoBoard.digital[6]]
 
-
-
 def make_interval_array(T, minInterval, maxInterval): # generates random intervals for TMS bursts
 	interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
 	while np.cumsum(interval_array)[-1] +.5 <= T:
@@ -157,17 +158,6 @@ def make_interval_array(T, minInterval, maxInterval): # generates random interva
 
 min_probe_interval=30 # in s
 max_probe_interval=60 # in s
-
-## randomization
-
-if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
-	rhythmic_tms = True
-	#session_duration=10*60 # in s
-	num_probes=10
-	TMS = m.Master8('/dev/cu.usbserial-14130')
-	TMS.changeChannelMode(1, "G")
-	if expInfo["session"]=="SAr" or if expInfo["session"]=="AAr":
-		rhythmic_tms = False
 
 ntrials=int(session_duration/ISI)
 probe_times=np.array(np.random.randint(min_probe_interval, max_probe_interval+1, num_probes-1)/ISI, dtype=np.int)
@@ -186,11 +176,27 @@ def generate_random_ipi(frequency, n_pulses):
 		ipis[n_ipi] = ipi
 	ipis = np.append(ipis, 1/frequency *(n_pulses-1) - sum(ipis)) # append the last ipi so that the sum of ipi equates to the duration of the burst in the rhythmic condition
 	return(ipis)
-
+	
+## randomization
 if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
+	rhythmic_tms = True
+	#session_duration=10*60 # in s
+	#num_probes=10
 	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment		
 	for task_period in stim_times:
 		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
+	TMS = m.Master8('/dev/cu.usbserial-14130')
+	TMS.changeChannelMode(1, "G")
+	if expInfo["session"]=="Ar":
+		session_name = "active_rhTMS"
+	elif expInfo["session"]=="Sr":
+		session_name = "sham_rhTMS"
+	elif expInfo["session"]=="SAr" or expInfo["session"]=="AAr":
+		rhythmic_tms = False
+		if expInfo["session"]=="SAr":
+			session_name = "sham_arrhTMS"
+		elif expInfo["session"]=="AAr":
+			session_name = "active_arrhTMS"
 	
 def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg):
 	pulse_num = 1
@@ -231,7 +237,7 @@ def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, 
 		f.flush()
 
 		
-filename =  thisDir+ "/Analyses/data/%s_%s_%s_%s" %(expInfo['participant'], expInfo["session"], expName, expInfo['date'])
+filename =  thisDir+ "/Analyses/data/%s_%s_%s_%s" %(expInfo['participant'], session_name, expName, expInfo['date'])
 #filename='data/test'
 datafile= filename + ".csv"
 
@@ -537,7 +543,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 
 	# official session start
 	task_clock.reset()
-	if 	expInfo["session"]=="rhTMS" or expInfo["session"]=="randTMS":
+	if 	expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
 		rTMS_interval_index = 1
 		if __name__ == "__main__":
 			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], 6, 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
@@ -609,7 +615,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 # 			f.write(logtext)
 # 			f.flush()
 			add_countdown_timer(3, "Place your index fingers on S and L. The trial restarts in...")
-			if 	(expInfo["session"]=="rhTMS" or expInfo["session"]=="randTMS" and rTMS_interval_index < len(pulse_intervals)):
+			if 	(expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
 					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 6, 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
 					rTMS_Thread.start() 
