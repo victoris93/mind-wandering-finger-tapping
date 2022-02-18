@@ -18,7 +18,7 @@ eeg = False
 session_name = "training"
 
 ## global variables
-fullscreen=False
+fullscreen=True
 quit_button="escape"
 key_no = "n"
 key_yes = "y"
@@ -225,10 +225,10 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 						response = "NA")
 				f.write(logtext)
 				f.flush()
-				time.sleep(ipi)
 				pulse_num += 1
-			pulse_num += 1
+				time.sleep(ipi)
 			tms.trigger(1)
+			pulse_num += 1
 			if eeg == True:
 				eeg_trigger(tms_pin)
 			logtext="{subj},{trial},{time},{type},{response}\n".format( \
