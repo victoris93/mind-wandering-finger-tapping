@@ -158,8 +158,6 @@ probe_times=np.array(np.random.randint(min_probe_interval, max_probe_interval+1,
 probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-20/ISI), dtype=np.int))
 #probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-num_probes/ISI), dtype=np.int)) #review this
 #probe_trials = np.cumsum(np.array(probe_times / 0.75), dtype=np.int)
-
-
 probe_trials=np.append(probe_trials, ntrials)
 print(probe_times)
 print(probe_trials)
@@ -216,12 +214,12 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 				tms.trigger(1)
 				if eeg == True:
 					eeg_trigger(tms_pin)
-				logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format( \
+				logtext="{subj}, {EEG},{trial},{time},{stimulus},{response}\n".format( \
 						subj=expInfo['participant'], \
 						EEG = eeg, \
 						trial=pulse_num,\
 						time="%.10f"%(TMSclock.getTime()), \
-						type="pulse", \
+						stimulus="pulse", \
 						response = "NA")
 				f.write(logtext)
 				f.flush()
@@ -231,12 +229,12 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 			pulse_num += 1
 			if eeg == True:
 				eeg_trigger(tms_pin)
-			logtext="{subj},{trial},{time},{type},{response}\n".format( \
+			logtext="{subj},{trial},{time},{stimulus},{response}\n".format( \
 						subj=expInfo['participant'], \
 						EEG = eeg, \
 						trial=pulse_num,\
 						time="%.10f"%(TMSclock.getTime()), \
-						type="pulse", \
+						stimulus="pulse", \
 						response = "NA")
 			f.write(logtext)
 			f.flush()
@@ -559,11 +557,12 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			if eeg == True:
 				eeg_trigger(tone_pin)
 			stimulus_time = task_clock.getTime()
-			logtext="{subj},{EEG},{trial},{time},{type},{response}\n".format( \
+			logtext="{subj},{EEG},{trial},{time},{stimulus},{response}\n".format( \
 				trial=trial,\
 				subj=expInfo['participant'], \
 				EEG = eeg, \
-				type="stimulus", response="", \
+				stimulus="stimulus", \
+				response="", \
 				time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
@@ -578,11 +577,12 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 							eeg_trigger(left_key_pin)
 						elif key_right in keys:
 							eeg_trigger(right_key_pin)
-					logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format( \
+					logtext="{subj}, {EEG},{trial},{time},{stimulus},{response}\n".format( \
 						trial=trial,\
 						subj=expInfo['participant'], \
 						EEG = eeg, \
-						type="tap", response=keys[0], \
+						stimulus="tap", \
+						response=keys[0], \
 						time="%.10f"%(task_clock.getTime()))
 					f.write(logtext)
 					f.flush()
@@ -594,11 +594,12 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				response_task=show_probe(probe_task, task_probe_keys, pin = probe_task_pin)
 			else:
 				response_task=show_probe(probe_task, task_probe_keys)
-			logtext="{subj},{EEG},{trial},{time},{type},{response}\n".format(\
+			logtext="{subj},{EEG},{trial},{time},{stimulus},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
 					EEG = eeg, \
-					type="probe_task", response= response_task, \
+					stimulus="probe_task", \
+					response= response_task, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
@@ -606,11 +607,12 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				response_intention=display_probe(probe_intention, probe_intention_keys, pin = probe_task_pin)
 			else:
 				response_intention=display_probe(probe_intention, probe_intention_keys)
-			logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format(\
+			logtext="{subj}, {EEG},{trial},{time},{stimulus},{response}\n".format(\
 					trial=trial,\
 					subj=expInfo['participant'], \
 					EEG = eeg, \
-					type="probe_intention", response= response_intention, \
+					stimulus="probe_intention", \
+					response= response_intention, \
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
@@ -632,11 +634,12 @@ if eeg == True:
 	response_task=show_probe(probe_task, task_probe_keys, pin = probe_task_pin)
 else:
 	response_task=show_probe(probe_task, task_probe_keys)
-	logtext="{subj},{EEG},{trial},{time},{type},{response}\n".format(\
+	logtext="{subj},{EEG},{trial},{time},{stimulus},{response}\n".format(\
 					trial=ntrials,\
 					subj=expInfo['participant'], \
 					EEG = eeg, \
-					type="probe_task", response= response_task, \
+					stimulus="probe_task", \
+					response= response_task, \
 					time="%.10f"%(task_clock.getTime()))
 	f.write(logtext)
 	f.flush()
@@ -644,11 +647,12 @@ else:
 		response_intention=display_probe(probe_intention, probe_intention_keys, pin = probe_task_pin)
 	else:
 		response_intention=display_probe(probe_intention, probe_intention_keys)
-	logtext="{subj}, {EEG},{trial},{time},{type},{response}\n".format(\
+	logtext="{subj}, {EEG},{trial},{time},{stimulus},{response}\n".format(\
 					trial=ntrials,\
 					subj=expInfo['participant'], \
 					EEG = eeg, \
-					type="probe_intention", response= response_intention, \
+					stimulus="probe_intention", \
+					response= response_intention, \
 					time="%.10f"%(task_clock.getTime()))
 	f.write(logtext)
 	f.flush()
