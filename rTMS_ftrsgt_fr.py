@@ -20,14 +20,15 @@ session_name = "training"
 ## global variables
 fullscreen=True
 quit_button="escape"
-key_left="s" 
-key_right="l" 
+key_left="s"
+key_right="l"
 probe_keys=["1","2", "3", "4"]
 binary_probe_keys = ["1", "2"]
 n_trials_training_session=1
 ISI = 0.75
 sleeptime=0 # 5
 stimcolor="white"
+probe_freq = "1_probe_min"
 
 ## Likert-scale
 class LikertScale:
@@ -91,7 +92,7 @@ class LikertScale:
 		for el in self.elements:
 			el.draw()
 		if self.show_arrow:
-			self.arrow.draw() 
+			self.arrow.draw()
 
 
 # Ensure that relative paths start from the same directory as this script
@@ -104,7 +105,7 @@ thisDir = os.getcwd()
 #AAr= active_arrhTMS
 #SAr = sham_aarhTMS
 expName = 'FT-RSGT'  # from the Builder filename that created this script
-expInfo = {"participant": '', "age": '', "sex":["Select", "F", "M"], 'session':["training","N","Ar", "Sr", "AAr", "SAr"], "EEG":["Select", "Yes", "No"], "Block number": '', "duration in min": ''}
+expInfo = {"participant": '', "age": '', "sex":["Select", "F", "M"], 'session':["training","N","Ar", "Sr", "AAr", "SAr"], "EEG":["Select", "Yes", "No"], "Block number": '', "duration in min": '', "P.freq":["1: 40-80 s", "2: 20-40 s"]}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
 if dlg.OK == False: core.quit()  # user pressed cancel
 expInfo['date'] = data.getDateStr()  # add a simple timestamp
@@ -114,16 +115,16 @@ if expInfo['session'] == "N":
 
 if expInfo["EEG"]=="Yes":
 	eeg = True
-	
+
 	def eeg_trigger(pins):
 		for pin in pins:
 			pin.write(1)
 		for pin in pins:
 			pin.write(0)
-		
+
 	ArduinoBoard = Arduino('/dev/cu.usbmodem142201') # Assigning triggers to pins via Arduino UNO
 	left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
-	right_key_pin = [ArduinoBoard.get_pin('d:4:o')] 
+	right_key_pin = [ArduinoBoard.get_pin('d:4:o')]
 	tms_pin = [ArduinoBoard.get_pin('d:5:o')]
 	probe_task_pin = [ArduinoBoard.get_pin('d:6:o')]
 	probe_intention_pin = [ArduinoBoard.get_pin('d:8:o')]
@@ -147,40 +148,46 @@ if expInfo["EEG"]=="Yes":
 
 
 if expInfo["session"] !="training":
-	session_duration=int(expInfo["duration in min"])*60 
-	num_probes = int(expInfo["duration in min"])
-	min_probe_interval=30 # in s
-	max_probe_interval=60 # in s
+	session_duration=int(expInfo["duration in min"])*60
+	if expInfo["P.freq"] == "1: 40-80 s":
+		num_probes = int(expInfo["duration in min"])
+		min_probe_interval=30 # in s
+		max_probe_interval=60 # in s
+	elif expInfo["P.freq"] ==  "2: 20-40 s":
+		probe_freq = "2_probes_min"
+		num_probes = int(expInfo["duration in min"]) * 2
+		min_probe_interval=15 # in s
+		max_probe_interval=30 # in s
 
 	ntrials=int(session_duration/ISI)
 	probe_times=np.array(np.random.randint(min_probe_interval, max_probe_interval+1, num_probes-1)/ISI, dtype=np.int)
 	probe_trials=np.cumsum(np.array(probe_times/sum(probe_times)*(ntrials-20/ISI), dtype=np.int))
 
 	probe_trials=np.append(probe_trials, ntrials)
-	
+
 if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
-	session_duration=int(expInfo["duration in min"])*60 
+	session_duration=int(expInfo["duration in min"])*60
 	rhythmic_tms = True
 	stim_times = np.append(probe_trials[0], np.diff(probe_trials)) * ISI -5
-	
+
 	def make_interval_array(T, minInterval, maxInterval): # generates random intervals for TMS bursts
 		interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
 		while np.cumsum(interval_array)[-1] +.5 <= T:
 				nextInterval = np.random.uniform(minInterval, maxInterval)
 				interval_array = np.append(interval_array, nextInterval)
-		return interval_array[:-2] 
-		
+		return interval_array[:-2]
+
 	def generate_random_ipi(frequency, n_pulses):
 		ipis = np.empty(2)
 		for n_ipi in range(n_pulses - 2):
-			ipi = np.random.uniform(.025, 1/frequency + .003) #generate a random ipi from 20 ms to [period + 3] ms. 
+			ipi = np.random.uniform(.025, 1/frequency + .003) #generate a random ipi from 20 ms to [period + 3] ms.
 			while ipi > 1/frequency - .003 and ipi < 1/frequency + .003: #check whether the generated ipi falls within the range of periods corresponding to the frequency of the rhythmic condition (highly unlikely)
 				ipi = np.random.uniform(.025, 1/frequency + .003)
 			ipis[n_ipi] = ipi
 		ipis = np.append(ipis, 1/frequency *(n_pulses-1) - sum(ipis)) # append the last ipi so that the sum of ipi equates to the duration of the burst in the rhythmic condition
 		return(ipis)
 
-	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment		
+	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
 	for task_period in stim_times:
 		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
 	TMS = m.Master8('/dev/cu.usbserial-14220')
@@ -195,7 +202,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 			session_name = "sham_arrhTMS"
 		elif expInfo["session"]=="AAr":
 			session_name = "active_arrhTMS"
-	
+
 	def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg):
 		pulse_num = 1
 		TMSclock = core.Clock()
@@ -209,12 +216,14 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 				tms.trigger(1)
 				if eeg == True:
 					eeg_trigger(tms_pin)
-				logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
+				logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
+						condition = condition, \
 						subj=expInfo['participant'], \
 						age=expInfo['age'], \
 						sex=expInfo['sex'], \
 						block_num=int(expInfo['Block number']), \
 						EEG = eeg, \
+						probe_freq = probe_freq, \
 						trial=pulse_num,\
 						time="%.10f"%(TMSclock.getTime()), \
 						stimulus="pulse", \
@@ -227,12 +236,14 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 			pulse_num += 1
 			if eeg == True:
 				eeg_trigger(tms_pin)
-			logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
+			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
+						condition = condition, \
 						subj=expInfo['participant'], \
 						age=expInfo['age'], \
 						sex=expInfo['sex'], \
 						block_num=int(expInfo['Block number']), \
 						EEG = eeg, \
+						probe_freq = probe_freq, \
 						trial=pulse_num,\
 						time="%.10f"%(TMSclock.getTime()), \
 						stimulus="pulse", \
@@ -240,8 +251,8 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 			f.write(logtext)
 			f.flush()
 
-		
-filename =  thisDir+ "/data/%s_%s_%s_%s_%s" %(expInfo['participant'], session_name, expInfo['Block number'], expName, expInfo['date'])
+
+filename =  thisDir+ "/data/%s_%s_%s_%s_%s_%s" %(expInfo['participant'], session_name, expInfo['Block number'],probe_freq, expName, expInfo['date'])
 #filename='data/test'
 datafile= filename + ".csv"
 
@@ -268,19 +279,19 @@ instruction_concepts_1 = visual.TextStim(win=win, ori=0, name='text',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 instruction_concepts_2 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"De manière générale, le vagabondage mental survient de manière spontanée mais parfois celui-ci peut être volontairement recherché et entrepris.\nPar exemple, lorsque l'on assiste à une présentation ennuyeuse et que l’on préfère penser au dîner de ce soir ou à cette amie que l’on voulait rappeler. Ce vagabondage mental dit ‘intentionnel’ survient lorsque l’on décide de poursuivre un fil de pensées déconnecté de l’activité en cours alors que le vagadondage mental ‘spontané’ correspond aux situations lors desquelles notre esprit dévie de l’activité en cours sans que l'on s’en aperçoive.\n\n Appuyez n'importe quelle touche pour continuer.",    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 instruction1 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"Placez votre index de la main gauche sur la touche S du clavier et votre index de la main droite sur la touche L du clavier. Pendant l’expérience, vous entendrez une tonalité émise à un rythme fixe. À chaque tonalité vous devrez presser soit à gauche (touche S) soit à droite (touche L). Vous ne pouvez cliquer qu’UNE SEULE touche à la fois. Il est important que vos clics individuels soient synchronisés avec le rythme de la tonalité aussi précisément que possible. \n\nAppuyez n'importe quelle touche pour continuer.",    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 instruction1b = visual.TextStim(win=win, ori=0, name='text', #Talk about this at the meeting
 	text=u"Votre tâche principale consiste à rendre la séquence de vos clics individuels aussi irrégulière que possible. Autrement dit essayez de rendre chaque clic aussi imprévisible que possible. Par exemple : ‘gauche-droite-gauche-droite-gauche-droite’ est plus prévisible que ‘gauche-gauche-droite-gauche-droite-droite’. \nCes instructions sont critiques pour la bonne réalisation de la tâche. Si vous n’êtes pas certain de les avoir comprises n’hésitez pas à solliciter l’expérimentateur. \n\nAppuyez n'importe quelle touche pour continuer.",    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
@@ -298,13 +309,13 @@ instruction1c = visual.TextStim(win=win, ori=0, name='text', #Talk about this at
 # 	pos=[0, 0], height=0.07, wrapWidth=None,
 # 	color='white', colorSpace='rgb', opacity=1,
 # 	depth=0.0)
-	
+
 instruction1d = visual.TextStim(win=win, ori=0, name='text',
 	text=u"Il est important de souligner qu’il n’y a ni de bonnes ni de mauvaises réponses, et qu’elles n’ont aucune conséquence pour vous, veuillez donc répondre aussi honnêtement que possible. \n\nAppuyez n'importe quelle touche pour continuer.",    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	 
+
 instruction1e = visual.TextStim(win=win, ori=0, name='text',
 	text=u"Il y aura une croix sur l’écran en face de vous pendant l’expérience, veuillez garder votre regard fixé sur cette croix tout au long de l’expérience. \n\nAppuyez n'importe quelle touche pour continuer.",    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
@@ -345,31 +356,31 @@ probe_task_instruction = visual.TextStim(win=win, ori=0, name='text',
 	pos=[0, 0], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_intention=LikertScale(win, 4,
 	instruction_text=u"Comment qualifieriez-vous la nature de votre attention ? \n",
 	scale_labels=["Complètement INVOLONTAIRE", "", "", "Complètement VOLONTAIRE"])
-	
+
 probe_intention_instruction = visual.TextStim(win=win, ori=0, name='text',
 	text=u"\n\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – Complètement INVOLONTAIRE », cela signifie que votre esprit divaguait sans votre contrôle (vos pensées se sont déplacées spontanément vers un examen que vous aurez bientôt ou votre attention a été distraite par un son)\n\n Si vous répondez « 4 – Complètement VOLONTAIRE », cela signifie que vous pensiez volontairement à quelque chose, que ce soit en lien avec la tâche ou non (vous comptiez le nombre d’appuis sur les boutons, ou vous vous disiez que vous étiez lassé de la tâche et que vous préfèreriez penser à quelque chose que vous ferez plus tard).\n\n Confirmez votre choix en appuyant ESPACE.",    font='Arial',
 	pos=[0, 0], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_content=LikertScale(win, 4,
 	instruction_text=u"Dans la mesure où vous pensiez à autre chose que la tâche, était-ce à rien ou bien à quelque chose en particulier ? \n\n",
 	scale_labels=["Сlairement RIEN", "", "", "Сlairement QUELQUE CHOSE"])
-	
+
 probe_content_instruction = visual.TextStim(win=win, ori=0, name='text',
 	text=u"\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – Clairement RIEN », cela signifie que vous n’aviez aucune forme de pensée (vide mental). \n\n Si vous répondez « 4 – Clairement QUELQUE CHOSE », cela signifie que vous aviez une idée, une image ou un courant de pensée spécifique (la tâche en cours, un voyage, une fête, un livre, etc.).\n\nConfirmez votre choix en appuyant ESPACE.",    font='Arial',
 		pos=[0, 0], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_somnolence=LikertScale(win, 4,
 	instruction_text=u"Comment vous sentez-vous ? \n\n",
 	scale_labels=["Très SOMNOLENT", "", "", "Très ALERTE"])
-	
+
 probe_somnolence_instruction = visual.TextStim(win=win, ori=0, name='text',
 	text=u"\n\n\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – très SOMNOLENT », cela signifie que vous avez peine à garder les yeux ouverts et que vous vous êtes assoupis quelques instants.\n\nSi vous répondez « 4 – très ALERTE », cela signifie que vous êtes sur le qui-vive.\n\n Confirmez votre choix en appuyant ESPACE.",    font='Arial',
 		pos=[0, 0], height=0.06, wrapWidth=None,
@@ -378,7 +389,7 @@ probe_somnolence_instruction = visual.TextStim(win=win, ori=0, name='text',
 # probe_intention=LikertScale(win, 2,
 # 	instruction_text=u"Did you intend to stay on task? Use keys 1 or 2 to respond.",
 # 	scale_labels=["no", "yes"])
-# 
+#
 # probe_distraction=LikertScale(win, 2,
 # 	instruction_text=u"Were you distracted by your surroundings? Use keys 1 or 2 to respond.",
 # 	scale_labels=["no", "yes"])
@@ -388,7 +399,7 @@ task_stimulus=visual.TextStim(win=win, ori=0, name='text',
 	pos=[0, 0], height=0.15, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 
 thankyou=visual.TextStim(win=win, ori=0, name='text',
 	text=u"Ça y est ! Merci !",    font='Arial',
@@ -435,7 +446,7 @@ def show_probe(probe, probe_instruction, nposs, pin = None, eeg = eeg):
 				probe.draw()
 				win.flip()
 				time.sleep(1.0)
-	
+
 def waitforkey():
 	while 1:
 		keys=event.getKeys()
@@ -443,11 +454,8 @@ def waitforkey():
 			sys.exit()
 		elif len(keys)>0:
 			break
-	
-with open(datafile, "w") as f:
-	f.write("# %s\n"%(str(expInfo)))
-	f.write("subj, age,sex,block_num,EEG,trial,time, stimulus, response\n")
-	
+
+
 task_clock = core.Clock()
 trial_clock = core.Clock()
 metronome_sound = sound.Sound('A', secs=0.075)
@@ -521,11 +529,15 @@ def add_countdown_timer(duration, message):
 		countdown.draw()
 		win.flip()
 
+condition = session_name + "_" + expInfo["Block number"]
 ##############################################3
 ## Training
 ##############################################3
 
 if expInfo["session"]=="training":
+	with open(datafile, "w") as f:
+		f.write("# %s\n"%(str(expInfo)))
+		f.write("condition, subj, age,sex,block_num,EEG,trial,time, stimulus, response\n")
 	n_trials_training_session = 20
 	training_session_starts.draw()
 	win.flip()
@@ -547,7 +559,8 @@ if expInfo["session"]=="training":
 		for trial in range(n_trials_training_session):
 			trial_clock.reset()
 			metronome_sound.play()
-			logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
+			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
+				condition = condition, \
 				trial=trial,\
 				subj=expInfo['participant'], \
 				age=expInfo['age'], \
@@ -564,8 +577,9 @@ if expInfo["session"]=="training":
 				keys=event.getKeys()
 				if quit_button in keys:
 					sys.exit()
-				if len(keys) > 0: 
-					logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
+				if len(keys) > 0:
+					logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
+							condition = condition, \
 							trial=trial,\
 							subj=expInfo['participant'], \
 							age=expInfo['age'], \
@@ -580,7 +594,8 @@ if expInfo["session"]=="training":
 				if current_time>ISI:
 					break
 		response_task = show_probe(probe_task, probe_task_instruction, nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
@@ -593,7 +608,8 @@ if expInfo["session"]=="training":
 		f.write(logtext)
 		f.flush()
 		response_intention = show_probe(probe_intention, probe_intention_instruction, nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
@@ -606,7 +622,8 @@ if expInfo["session"]=="training":
 		f.write(logtext)
 		f.flush()
 		response_content = show_probe(probe_content, probe_content_instruction, nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
@@ -619,7 +636,8 @@ if expInfo["session"]=="training":
 		f.write(logtext)
 		f.flush()
 		response_somnolence = show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
@@ -631,7 +649,7 @@ if expInfo["session"]=="training":
 					time="%.10f"%(task_clock.getTime()))
 		f.write(logtext)
 		f.flush()
-		
+
 		## ask for repeating the training
 		training_repeat.draw()
 		win.flip()
@@ -654,6 +672,9 @@ if expInfo["session"]=="training":
 ## Experiment starts
 ##############################################3
 if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
+	with open(datafile, "w") as f:
+		f.write("# %s\n"%(str(expInfo)))
+		f.write("condition,subj, age,sex,block_num,EEG,probe_freq,trial,time, stimulus, response\n")
 	real_experiment_starts.draw()
 	win.flip()
 	time.sleep(sleeptime)
@@ -682,13 +703,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			if eeg == True:
 				eeg_trigger(tone_pin)
 			stimulus_time = task_clock.getTime()
-			logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
+			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
+				condition = condition, \
 				trial=trial,\
 				subj=expInfo['participant'], \
 				age=expInfo['age'], \
 				sex=expInfo['sex'], \
 				block_num=int(expInfo['Block number']), \
 				EEG = eeg, \
+				probe_freq = probe_freq, \
 				stimulus="stimulus", \
 				response="", \
 				time="%.10f"%(task_clock.getTime()))
@@ -705,13 +728,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 							eeg_trigger(left_key_pin)
 						elif key_right in keys:
 							eeg_trigger(right_key_pin)
-					logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format( \
-						trial=trial,\
+					logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
+						condition=condition, \
+						trial=trial, \
 						subj=expInfo['participant'], \
 						age=expInfo['age'], \
 						sex=expInfo['sex'], \
 						block_num=int(expInfo['Block number']), \
 						EEG = eeg, \
+						probe_freq = probe_freq, \
 						stimulus="tap", \
 						response=keys[0], \
 						time="%.10f"%(task_clock.getTime()))
@@ -725,13 +750,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				response_task=show_probe(probe_task, probe_task_instruction, nposs = 4, pin = probe_task_pin)
 			else:
 				response_task=show_probe(probe_task, probe_task_instruction, nposs = 4)
-			logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
 					sex=expInfo['sex'], \
 					block_num=int(expInfo['Block number']), \
 					EEG = eeg, \
+					probe_freq = probe_freq, \
 					stimulus="probe_task", \
 					response= response_task, \
 					time="%.10f"%(task_clock.getTime()))
@@ -741,13 +768,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				response_intention=show_probe(probe_intention, probe_intention_instruction, nposs = 4, pin = probe_task_pin)
 			else:
 				response_intention=show_probe(probe_intention, probe_intention_instruction, nposs = 4)
-			logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
 					sex=expInfo['sex'], \
 					block_num=int(expInfo['Block number']), \
 					EEG = eeg, \
+					probe_freq = probe_freq, \
 					stimulus="probe_intention", \
 					response= response_intention, \
 					time="%.10f"%(task_clock.getTime()))
@@ -757,13 +786,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				response_content=show_probe(probe_content, probe_content_instruction, nposs = 4, pin = probe_task_pin)
 			else:
 				response_content=show_probe(probe_content, probe_content_instruction, nposs = 4)
-			logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
 					sex=expInfo['sex'], \
 					block_num=int(expInfo['Block number']), \
 					EEG = eeg, \
+					probe_freq = probe_freq, \
 					stimulus="probe_content", \
 					response= response_content, \
 					time="%.10f"%(task_clock.getTime()))
@@ -773,13 +804,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4, pin = probe_task_pin)
 			else:
 				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4)
-			logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+					condition = condition, \
 					trial=trial,\
 					subj=expInfo['participant'], \
 					age=expInfo['age'], \
 					sex=expInfo['sex'], \
 					block_num=int(expInfo['Block number']), \
 					EEG = eeg, \
+					probe_freq = probe_freq, \
 					stimulus="probe_somnolence", \
 					response= response_somnolence, \
 					time="%.10f"%(task_clock.getTime()))
@@ -789,7 +822,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			if 	(expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
 					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 6, 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
-					rTMS_Thread.start() 
+					rTMS_Thread.start()
 				task_stimulus.draw()
 				win.flip()
 				time.sleep(ISI)
@@ -803,13 +836,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 		response_task=show_probe(probe_task, probe_task_instruction,nposs = 4, pin = probe_task_pin)
 	else:
 		response_task=show_probe(probe_task, probe_task_instruction,nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+						condition = condition, \
 						trial=ntrials,\
 						subj=expInfo['participant'], \
 						age=expInfo['age'], \
 						sex=expInfo['sex'], \
 						block_num=int(expInfo['Block number']), \
 						EEG = eeg, \
+						probe_freq = probe_freq, \
 						stimulus="probe_task", \
 						response= response_task, \
 						time="%.10f"%(task_clock.getTime()))
@@ -819,13 +854,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 		response_intention=show_probe(probe_intention, probe_intention_instruction,nposs = 4, pin = probe_task_pin)
 	else:
 		response_intention=show_probe(probe_intention, probe_intention_instruction, nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+						condition = condition, \
 						trial=ntrials,\
 						subj=expInfo['participant'], \
 						age=expInfo['age'], \
 						sex=expInfo['sex'], \
 						block_num=int(expInfo['Block number']), \
 						EEG = eeg, \
+						probe_freq = probe_freq, \
 						stimulus="probe_intention", \
 						response= response_intention, \
 						time="%.10f"%(task_clock.getTime()))
@@ -835,13 +872,15 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 		response_content=show_probe(probe_content, probe_content_instruction, nposs = 4, pin = probe_task_pin)
 	else:
 		response_content=show_probe(probe_content, probe_content_instruction, nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+				condition = condition, \
 				trial=trial,\
 				subj=expInfo['participant'], \
 				age=expInfo['age'], \
 				sex=expInfo['sex'], \
 				block_num=int(expInfo['Block number']), \
 				EEG = eeg, \
+				probe_freq = probe_freq, \
 				stimulus="probe_content", \
 				response= response_content, \
 				time="%.10f"%(task_clock.getTime()))
@@ -851,19 +890,21 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4, pin = probe_task_pin)
 	else:
 		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4)
-		logtext="{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+				condition = condition, \
 				trial=trial,\
 				subj=expInfo['participant'], \
 				age=expInfo['age'], \
 				sex=expInfo['sex'], \
 				block_num=int(expInfo['Block number']), \
 				EEG = eeg, \
+				probe_freq = probe_freq, \
 				stimulus="probe_somnolence", \
 				response= response_somnolence, \
 				time="%.10f"%(task_clock.getTime()))
 		f.write(logtext)
 		f.flush()
-			
+
 thankyou.draw()
 win.flip()
 time.sleep(2)
