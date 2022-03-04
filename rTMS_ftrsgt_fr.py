@@ -367,15 +367,15 @@ probe_intention_instruction = visual.TextStim(win=win, ori=0, name='text',
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
 
-probe_content=LikertScale(win, 4,
-	instruction_text=u"Dans la mesure où vous pensiez à autre chose que la tâche, était-ce à rien ou bien à quelque chose en particulier ? \n\n",
-	scale_labels=["Сlairement RIEN", "", "", "Сlairement QUELQUE CHOSE"])
-
-probe_content_instruction = visual.TextStim(win=win, ori=0, name='text',
-	text=u"\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – Clairement RIEN », cela signifie que vous n’aviez aucune forme de pensée (vide mental). \n\n Si vous répondez « 4 – Clairement QUELQUE CHOSE », cela signifie que vous aviez une idée, une image ou un courant de pensée spécifique (la tâche en cours, un voyage, une fête, un livre, etc.).\n\nConfirmez votre choix en appuyant ESPACE.",    font='Arial',
-		pos=[0, 0], height=0.06, wrapWidth=None,
-	color='white', colorSpace='rgb', opacity=1,
-	depth=0.0)
+# probe_content=LikertScale(win, 4,
+# 	instruction_text=u"Dans la mesure où vous pensiez à autre chose que la tâche, était-ce à rien ou bien à quelque chose en particulier ? \n\n",
+# 	scale_labels=["Сlairement RIEN", "", "", "Сlairement QUELQUE CHOSE"])
+# 
+# probe_content_instruction = visual.TextStim(win=win, ori=0, name='text',
+# 	text=u"\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – Clairement RIEN », cela signifie que vous n’aviez aucune forme de pensée (vide mental). \n\n Si vous répondez « 4 – Clairement QUELQUE CHOSE », cela signifie que vous aviez une idée, une image ou un courant de pensée spécifique (la tâche en cours, un voyage, une fête, un livre, etc.).\n\nConfirmez votre choix en appuyant ESPACE.",    font='Arial',
+# 		pos=[0, 0], height=0.06, wrapWidth=None,
+# 	color='white', colorSpace='rgb', opacity=1,
+# 	depth=0.0)
 
 probe_somnolence=LikertScale(win, 4,
 	instruction_text=u"Comment vous sentez-vous ? \n\n",
@@ -621,20 +621,20 @@ if expInfo["session"]=="training":
 					time="%.10f"%(task_clock.getTime()))
 		f.write(logtext)
 		f.flush()
-		response_content = show_probe(probe_content, probe_content_instruction, nposs = 4)
-		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
-					condition = condition, \
-					trial=trial,\
-					subj=expInfo['participant'], \
-					age=expInfo['age'], \
-					sex=expInfo['sex'], \
-					block_num=int(expInfo['Block number']), \
-					EEG = eeg, \
-					stimulus="probe_content", \
-					response= response_content, \
-					time="%.10f"%(task_clock.getTime()))
-		f.write(logtext)
-		f.flush()
+# 		response_content = show_probe(probe_content, probe_content_instruction, nposs = 4)
+# 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
+# 					condition = condition, \
+# 					trial=trial,\
+# 					subj=expInfo['participant'], \
+# 					age=expInfo['age'], \
+# 					sex=expInfo['sex'], \
+# 					block_num=int(expInfo['Block number']), \
+# 					EEG = eeg, \
+# 					stimulus="probe_content", \
+# 					response= response_content, \
+# 					time="%.10f"%(task_clock.getTime()))
+# 		f.write(logtext)
+# 		f.flush()
 		response_somnolence = show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
 					condition = condition, \
@@ -658,10 +658,10 @@ if expInfo["session"]=="training":
 
 		while 1:
 			keys=event.getKeys()
-			if key_right in keys:
+			if key_left in keys:
 				repeat_training=False
 				break
-			elif key_left in keys:
+			elif key_right in keys:
 				repeat_training=True
 				add_countdown_timer(3, "Placez vos index sur les touches S et L.\n L'expérience recommence dans...")
 				break
@@ -782,24 +782,24 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 					time="%.10f"%(task_clock.getTime()))
 			f.write(logtext)
 			f.flush()
-			if eeg == True:
-				response_content=show_probe(probe_content, probe_content_instruction, nposs = 4, pin = probe_task_pin)
-			else:
-				response_content=show_probe(probe_content, probe_content_instruction, nposs = 4)
-			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
-					condition = condition, \
-					trial=trial,\
-					subj=expInfo['participant'], \
-					age=expInfo['age'], \
-					sex=expInfo['sex'], \
-					block_num=int(expInfo['Block number']), \
-					EEG = eeg, \
-					probe_freq = probe_freq, \
-					stimulus="probe_content", \
-					response= response_content, \
-					time="%.10f"%(task_clock.getTime()))
-			f.write(logtext)
-			f.flush()
+# 			if eeg == True:
+# 				response_content=show_probe(probe_content, probe_content_instruction, nposs = 4, pin = probe_task_pin)
+# 			else:
+# 				response_content=show_probe(probe_content, probe_content_instruction, nposs = 4)
+# 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+# 					condition = condition, \
+# 					trial=trial,\
+# 					subj=expInfo['participant'], \
+# 					age=expInfo['age'], \
+# 					sex=expInfo['sex'], \
+# 					block_num=int(expInfo['Block number']), \
+# 					EEG = eeg, \
+# 					probe_freq = probe_freq, \
+# 					stimulus="probe_content", \
+# 					response= response_content, \
+# 					time="%.10f"%(task_clock.getTime()))
+# 			f.write(logtext)
+# 			f.flush()
 			if eeg == True:
 				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4, pin = probe_task_pin)
 			else:
@@ -868,24 +868,24 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 						time="%.10f"%(task_clock.getTime()))
 		f.write(logtext)
 		f.flush()
-	if eeg == True:
-		response_content=show_probe(probe_content, probe_content_instruction, nposs = 4, pin = probe_task_pin)
-	else:
-		response_content=show_probe(probe_content, probe_content_instruction, nposs = 4)
-		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
-				condition = condition, \
-				trial=trial,\
-				subj=expInfo['participant'], \
-				age=expInfo['age'], \
-				sex=expInfo['sex'], \
-				block_num=int(expInfo['Block number']), \
-				EEG = eeg, \
-				probe_freq = probe_freq, \
-				stimulus="probe_content", \
-				response= response_content, \
-				time="%.10f"%(task_clock.getTime()))
-		f.write(logtext)
-		f.flush()
+# 	if eeg == True:
+# 		response_content=show_probe(probe_content, probe_content_instruction, nposs = 4, pin = probe_task_pin)
+# 	else:
+# 		response_content=show_probe(probe_content, probe_content_instruction, nposs = 4)
+# 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+# 				condition = condition, \
+# 				trial=trial,\
+# 				subj=expInfo['participant'], \
+# 				age=expInfo['age'], \
+# 				sex=expInfo['sex'], \
+# 				block_num=int(expInfo['Block number']), \
+# 				EEG = eeg, \
+# 				probe_freq = probe_freq, \
+# 				stimulus="probe_content", \
+# 				response= response_content, \
+# 				time="%.10f"%(task_clock.getTime()))
+# 		f.write(logtext)
+# 		f.flush()
 	if eeg == True:
 		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4, pin = probe_task_pin)
 	else:
