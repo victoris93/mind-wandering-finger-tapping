@@ -24,7 +24,6 @@ quit_button="escape"
 key_left="s"
 key_right="l"
 probe_keys=["1","2", "3", "4"]
-binary_probe_keys = ["1", "2"]
 n_trials_training_session=1
 ISI = 0.75
 sleeptime=0 # 5
@@ -123,19 +122,19 @@ if expInfo["EEG"]=="Yes":
 		for pin in pins:
 			pin.write(0)
 
-	ArduinoBoard = Arduino('/dev/cu.usbmodem142201') # Assigning triggers to pins via Arduino UNO
+	ArduinoBoard = Arduino('/dev/ttyACM0') # Assigning triggers to pins via Arduino UNO
 	left_key_pin = [ArduinoBoard.get_pin('d:3:o')] # S1
 	right_key_pin = [ArduinoBoard.get_pin('d:4:o')]
 	tms_pin = [ArduinoBoard.get_pin('d:5:o')]
 	probe_task_pin = [ArduinoBoard.get_pin('d:6:o')]
 	probe_intention_pin = [ArduinoBoard.get_pin('d:8:o')]
-	probe_content_pin = [ArduinoBoard.get_pin('d:2:o')]
-	probe_content_pin = [ArduinoBoard.get_pin('d:9:o')]
+	probe_somnolence_pin = [ArduinoBoard.get_pin('d:9:o')]
 	probe_response_pin_1 = [ArduinoBoard.digital[2], ArduinoBoard.digital[3]]
 	probe_response_pin_2 = [ArduinoBoard.digital[3], ArduinoBoard.digital[4]]
 	probe_response_pin_3 = [ArduinoBoard.digital[4], ArduinoBoard.digital[5]]
 	probe_response_pin_4 = [ArduinoBoard.digital[5], ArduinoBoard.digital[6]]
 	tone_pin = [ArduinoBoard.get_pin('d:7:o')]
+	end_session_pin = [ArduinoBoard.get_pin('d:2:o')]
 	if expInfo["session"] == "N":
 		start_session_pin = [ArduinoBoard.digital[2], ArduinoBoard.digital[2], ArduinoBoard.digital[2]]
 	elif expInfo["session"] == "Ar":
@@ -191,7 +190,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
 	for task_period in stim_times:
 		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
-	TMS = m.Master8('/dev/cu.usbserial-14220')
+	TMS = m.Master8('/dev/ttyUSB1')
 	TMS.changeChannelMode(1, "G")
 	if expInfo["session"]=="Ar":
 		session_name = "active_rhTMS"
@@ -782,7 +781,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			f.write(logtext)
 			f.flush()
 			if eeg == True:
-				response_intention=show_probe(probe_intention, probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_task_pin)
+				response_intention=show_probe(probe_intention, probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_intention_pin)
 			else:
 				response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4)
 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
@@ -818,7 +817,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 # 			f.write(logtext)
 # 			f.flush()
 			if eeg == True:
-				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_task_pin)
+				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_somnolence_pin)
 			else:
 				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4)
 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
@@ -868,7 +867,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 		f.write(logtext)
 		f.flush()
 	if eeg == True:
-		response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm,nposs = 4, pin = probe_task_pin)
+		response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm,nposs = 4, pin = probe_intention_pin)
 	else:
 		response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
@@ -904,7 +903,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 # 		f.write(logtext)
 # 		f.flush()
 	if eeg == True:
-		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_task_pin)
+		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_somnolence_pin)
 	else:
 		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
@@ -924,5 +923,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 
 thankyou.draw()
 win.flip()
+if eeg == True:
+	eeg_trigger(end_session_pin)
 time.sleep(2)
 waitforkey()
