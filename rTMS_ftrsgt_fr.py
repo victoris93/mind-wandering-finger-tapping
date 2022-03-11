@@ -16,6 +16,7 @@ import threading
 from pyfirmata import Arduino, util
 eeg = False
 session_name = "training"
+tms_frequency = 6 #### SUBJECT-WISE VAR
 
 ## global variables
 fullscreen=True
@@ -177,7 +178,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 				interval_array = np.append(interval_array, nextInterval)
 		return interval_array[:-2]
 
-	def generate_random_ipi(frequency, n_pulses):
+	def generate_random_ipi(n_pulses, frequency = tms_frequency): 
 		ipis = np.empty(2)
 		for n_ipi in range(n_pulses - 2):
 			ipi = np.random.uniform(.025, 1/frequency + .003) #generate a random ipi from 20 ms to [period + 3] ms.
@@ -203,7 +204,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 		elif expInfo["session"]=="AAr":
 			session_name = "active_arrhTMS"
 
-	def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg):
+	def rTMS(tms, interval_array, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg, frequency = tms_frequency):
 		pulse_num = 1
 		TMSclock = core.Clock()
 		TMSclock.add(-1 * current_task_time)
@@ -211,7 +212,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 			time.sleep(interval - .001) #1 ms to send the trigger to master-8
 			ipis = np.full(3, 1/frequency)
 			if rhythmic == False:
-				ipis = generate_random_ipi(6, 4)
+				ipis = generate_random_ipi(4)
 			for ipi in ipis:
 				tms.trigger(1)
 				if eeg == True:
@@ -350,42 +351,57 @@ real_experiment_starts=visual.TextStim(win=win, ori=0, name='text',
 probe_task=LikertScale(win, 4,
 	instruction_text=u"Juste avant l’interruption, votre attention était: \n",
 	scale_labels=["Entièrement HORS tâche", "", "", "Entièrement SUR la tâche"])
+	
+probe_task_instruction_1 = visual.TextStim(win=win, ori=0, name='text',
+	text=u"Si vous répondez « 1 – Entièrement hors tâche »,\n cela signifie que vous pensiez\n à d’autres choses\n (rêverie, souvenirs,\n planification future, amis, etc.).",    font='Arial',
+	pos=[-.5, -.2], height=0.06, wrapWidth=None,
+	color='white', colorSpace='rgb', opacity=1,
+	depth=0.0)
+	
+probe_task_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
+	text=u"Si vous répondez « 4 – Entièrement sur la tâche »,\n cela signifie que vous étiez\n concentré sur la tâche\n (sur quels boutons vous allez appuyer,\n sur quels boutons vous avez appuyé,\n et à quel rythme, etc.).",    font='Arial',
+	pos=[.5, -.23], height=0.06, wrapWidth=None,
+	color='white', colorSpace='rgb', opacity=1,
+	depth=0.0)
 
-probe_task_instruction = visual.TextStim(win=win, ori=0, name='text',
-	text=u"\n\n\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – Entièrement hors tâche », cela signifie que vous pensiez à d’autres choses (rêverie, souvenirs, planification future, amis, etc.). \n\n Si vous répondez « 4 – Entièrement sur la tâche », cela signifie que vous étiez concentré sur la tâche (sur quels boutons vous allez appuyer, sur quels boutons vous avez appuyé, et à quel rythme, etc.). \n\n Confirmez votre choix en appuyant ESPACE.",    font='Arial',
-	pos=[0, 0], height=0.06, wrapWidth=None,
+probe_instruction_confirm = visual.TextStim(win=win, ori=0, name='text',
+	text=u"Confirmez votre choix en appuyant ESPACE.",    font='Arial',
+	pos=[0, -.8], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
 
 probe_intention=LikertScale(win, 4,
-	instruction_text=u"Comment qualifieriez-vous la nature de votre attention ? \n",
+	instruction_text=u"Comment qualifieriez-vous la nature de votre attention ?\n",
 	scale_labels=["Complètement INVOLONTAIRE", "", "", "Complètement VOLONTAIRE"])
 
-probe_intention_instruction = visual.TextStim(win=win, ori=0, name='text',
-	text=u"\n\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – Complètement INVOLONTAIRE », cela signifie que votre esprit divaguait sans votre contrôle (vos pensées se sont déplacées spontanément vers un examen que vous aurez bientôt ou votre attention a été distraite par un son)\n\n Si vous répondez « 4 – Complètement VOLONTAIRE », cela signifie que vous pensiez volontairement à quelque chose, que ce soit en lien avec la tâche ou non (vous comptiez le nombre d’appuis sur les boutons, ou vous vous disiez que vous étiez lassé de la tâche et que vous préfèreriez penser à quelque chose que vous ferez plus tard).\n\n Confirmez votre choix en appuyant ESPACE.",    font='Arial',
-	pos=[0, 0], height=0.06, wrapWidth=None,
+probe_intention_instruction_1 = visual.TextStim(win=win, ori=0, name='text',
+	text=u"Si vous répondez « 1 – Complètement INVOLONTAIRE »,\n cela signifie que votre esprit\n divaguait sans votre contrôle\n (vos pensées se sont déplacées\n spontanément vers un examen\n que vous aurez bientôt\n ou votre attention a\n été distraite par un son).",    font='Arial',
+	pos=[-.5, -.3], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
 
-# probe_content=LikertScale(win, 4,
-# 	instruction_text=u"Dans la mesure où vous pensiez à autre chose que la tâche, était-ce à rien ou bien à quelque chose en particulier ? \n\n",
-# 	scale_labels=["Сlairement RIEN", "", "", "Сlairement QUELQUE CHOSE"])
-# 
-# probe_content_instruction = visual.TextStim(win=win, ori=0, name='text',
-# 	text=u"\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – Clairement RIEN », cela signifie que vous n’aviez aucune forme de pensée (vide mental). \n\n Si vous répondez « 4 – Clairement QUELQUE CHOSE », cela signifie que vous aviez une idée, une image ou un courant de pensée spécifique (la tâche en cours, un voyage, une fête, un livre, etc.).\n\nConfirmez votre choix en appuyant ESPACE.",    font='Arial',
-# 		pos=[0, 0], height=0.06, wrapWidth=None,
-# 	color='white', colorSpace='rgb', opacity=1,
-# 	depth=0.0)
-
+probe_intention_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
+	text=u"Si vous répondez « 4 – Complètement VOLONTAIRE »,\n cela signifie que vous pensiez\n volontairement à quelque chose,\n que ce soit en lien avec la tâche\n ou non (vous comptiez le nombre\n d’appuis sur les boutons,\n ou vous vous disiez que\n vous étiez lassé de la tâche,\n et que vous préfèreriez penser à ce\n que vous ferez plus tard).",    font='Arial',
+	pos=[.5, -.37], height=0.06, wrapWidth=None,
+	color='white', colorSpace='rgb', opacity=1,
+	depth=0.0)
+	
 probe_somnolence=LikertScale(win, 4,
 	instruction_text=u"Comment vous sentez-vous ? \n\n",
 	scale_labels=["Très SOMNOLENT", "", "", "Très ALERTE"])
 
-probe_somnolence_instruction = visual.TextStim(win=win, ori=0, name='text',
-	text=u"\n\n\n\n\n\n\n\n\n\n\n\n\n\nSi vous répondez « 1 – très SOMNOLENT », cela signifie que vous avez peine à garder les yeux ouverts et que vous vous êtes assoupis quelques instants.\n\nSi vous répondez « 4 – très ALERTE », cela signifie que vous êtes sur le qui-vive.\n\n Confirmez votre choix en appuyant ESPACE.",    font='Arial',
-		pos=[0, 0], height=0.06, wrapWidth=None,
+probe_somnolence_instruction_1 = visual.TextStim(win=win, ori=0, name='text',
+	text=u"Si vous répondez « 1 – très SOMNOLENT »,\n cela signifie que vous avez peine à\n garder les yeux ouverts\n  et que vous vous êtes assoupis quelques instants.",    font='Arial',
+		pos=[-.5, -.25], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
+	
+probe_somnolence_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
+	text=u"Si vous répondez « 4 – très ALERTE »,\n cela signifie que vous êtes sur le qui-vive.",    font='Arial',
+		pos=[.5, -.17], height=0.06, wrapWidth=None,
+	color='white', colorSpace='rgb', opacity=1,
+	depth=0.0)
+	
 # probe_intention=LikertScale(win, 2,
 # 	instruction_text=u"Did you intend to stay on task? Use keys 1 or 2 to respond.",
 # 	scale_labels=["no", "yes"])
@@ -400,22 +416,22 @@ task_stimulus=visual.TextStim(win=win, ori=0, name='text',
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
 
-
 thankyou=visual.TextStim(win=win, ori=0, name='text',
 	text=u"Ça y est ! Merci !",    font='Arial',
 	pos=[0, 0], height=0.15, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
 
-
-def show_probe(probe, probe_instruction, nposs, pin = None, eeg = eeg):
+def show_probe(probe, probe_instruction_1, probe_instruction_2, instruction_confirm, nposs, pin = None, eeg = eeg):
 	position = probe.init_random(nposs)
 	probe.show_arrow=True #when True, the arrow appears above the last tick
 	if eeg == True:
 		eeg_trigger(pin)
 	while(1):
 		probe.draw()
-		probe_instruction.draw()
+		probe_instruction_1.draw()
+		probe_instruction_2.draw()
+		instruction_confirm.draw()
 		win.flip()
 		keys=event.getKeys()
 		if len(set(keys))>0:
@@ -446,6 +462,7 @@ def show_probe(probe, probe_instruction, nposs, pin = None, eeg = eeg):
 				probe.draw()
 				win.flip()
 				time.sleep(1.0)
+
 
 def waitforkey():
 	while 1:
@@ -593,7 +610,7 @@ if expInfo["session"]=="training":
 					f.flush()
 				if current_time>ISI:
 					break
-		response_task = show_probe(probe_task, probe_task_instruction, nposs = 4)
+		response_task = show_probe(probe_task, probe_task_instruction_1,probe_task_instruction_2,  probe_instruction_confirm, nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
 					condition = condition, \
 					trial=trial,\
@@ -607,7 +624,7 @@ if expInfo["session"]=="training":
 					time="%.10f"%(task_clock.getTime()))
 		f.write(logtext)
 		f.flush()
-		response_intention = show_probe(probe_intention, probe_intention_instruction, nposs = 4)
+		response_intention = show_probe(probe_intention, probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm,  nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
 					condition = condition, \
 					trial=trial,\
@@ -635,7 +652,7 @@ if expInfo["session"]=="training":
 # 					time="%.10f"%(task_clock.getTime()))
 # 		f.write(logtext)
 # 		f.flush()
-		response_somnolence = show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4)
+		response_somnolence = show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2, probe_instruction_confirm, nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{trial},{time},{stimulus},{response}\n".format(\
 					condition = condition, \
 					trial=trial,\
@@ -693,7 +710,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 	if 	expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
 		rTMS_interval_index = 1
 		if __name__ == "__main__":
-			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], 6, 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
+			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
 			rTMS_Thread.start()
 	for trial in range(ntrials):
 		trial_clock.reset()
@@ -747,9 +764,9 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 					break
 		else:
 			if eeg == True:
-				response_task=show_probe(probe_task, probe_task_instruction, nposs = 4, pin = probe_task_pin)
+				response_task=show_probe(probe_task,  probe_task_instruction_1,probe_task_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_task_pin)
 			else:
-				response_task=show_probe(probe_task, probe_task_instruction, nposs = 4)
+				response_task=show_probe(probe_task, probe_task_instruction_1,probe_task_instruction_2,  probe_instruction_confirm, nposs = 4)
 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 					condition = condition, \
 					trial=trial,\
@@ -765,9 +782,9 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			f.write(logtext)
 			f.flush()
 			if eeg == True:
-				response_intention=show_probe(probe_intention, probe_intention_instruction, nposs = 4, pin = probe_task_pin)
+				response_intention=show_probe(probe_intention, probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_task_pin)
 			else:
-				response_intention=show_probe(probe_intention, probe_intention_instruction, nposs = 4)
+				response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4)
 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 					condition = condition, \
 					trial=trial,\
@@ -801,9 +818,9 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 # 			f.write(logtext)
 # 			f.flush()
 			if eeg == True:
-				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4, pin = probe_task_pin)
+				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_task_pin)
 			else:
-				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4)
+				response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4)
 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 					condition = condition, \
 					trial=trial,\
@@ -821,7 +838,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			add_countdown_timer(3, " Placez vos index sur les touches S et L.\n L'expérience recommence dans...")
 			if 	(expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
-					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 6, 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
+					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
 					rTMS_Thread.start()
 				task_stimulus.draw()
 				win.flip()
@@ -833,9 +850,9 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				time.sleep(ISI)
 
 	if eeg == True:
-		response_task=show_probe(probe_task, probe_task_instruction,nposs = 4, pin = probe_task_pin)
+		response_task=show_probe(probe_task, probe_task_instruction_1,probe_task_instruction_2,  probe_instruction_confirm,nposs = 4, pin = probe_task_pin)
 	else:
-		response_task=show_probe(probe_task, probe_task_instruction,nposs = 4)
+		response_task=show_probe(probe_task, probe_task_instruction_1,probe_task_instruction_2,  probe_instruction_confirm,nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 						condition = condition, \
 						trial=ntrials,\
@@ -851,9 +868,9 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 		f.write(logtext)
 		f.flush()
 	if eeg == True:
-		response_intention=show_probe(probe_intention, probe_intention_instruction,nposs = 4, pin = probe_task_pin)
+		response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm,nposs = 4, pin = probe_task_pin)
 	else:
-		response_intention=show_probe(probe_intention, probe_intention_instruction, nposs = 4)
+		response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 						condition = condition, \
 						trial=ntrials,\
@@ -887,9 +904,9 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 # 		f.write(logtext)
 # 		f.flush()
 	if eeg == True:
-		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4, pin = probe_task_pin)
+		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_task_pin)
 	else:
-		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction, nposs = 4)
+		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4)
 		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 				condition = condition, \
 				trial=trial,\

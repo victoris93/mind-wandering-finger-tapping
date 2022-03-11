@@ -16,6 +16,7 @@ import threading
 from pyfirmata import Arduino, util
 eeg = False
 session_name = "training"
+tms_frequency = 6 #### SUBJECT-WISE VAR
 
 ## global variables
 fullscreen=False
@@ -177,7 +178,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 				interval_array = np.append(interval_array, nextInterval)
 		return interval_array[:-2]
 
-	def generate_random_ipi(frequency, n_pulses):
+	def generate_random_ipi(n_pulses, frequency = tms_frequency):
 		ipis = np.empty(2)
 		for n_ipi in range(n_pulses - 2):
 			ipi = np.random.uniform(.025, 1/frequency + .003) #generate a random ipi from 20 ms to [period + 3] ms.
@@ -203,7 +204,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 		elif expInfo["session"]=="AAr":
 			session_name = "active_arrhTMS"
 
-	def rTMS(tms, interval_array, frequency, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg):
+	def rTMS(tms, interval_array, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg, frequency = tms_frequency):
 		pulse_num = 1
 		TMSclock = core.Clock()
 		TMSclock.add(-1 * current_task_time)
@@ -211,7 +212,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 			time.sleep(interval - .001) #1 ms to send the trigger to master-8
 			ipis = np.full(3, 1/frequency)
 			if rhythmic == False:
-				ipis = generate_random_ipi(6, 4)
+				ipis = generate_random_ipi(4)
 			for ipi in ipis:
 				tms.trigger(1)
 				if eeg == True:
@@ -709,7 +710,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 	if 	expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
 		rTMS_interval_index = 1
 		if __name__ == "__main__":
-			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], 6, 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
+			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
 			rTMS_Thread.start()
 	for trial in range(ntrials):
 		trial_clock.reset()
@@ -836,7 +837,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			f.flush()
 			if 	(expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
-					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 6, 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
+					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
 					rTMS_Thread.start()
 				task_stimulus.draw()
 				win.flip()
