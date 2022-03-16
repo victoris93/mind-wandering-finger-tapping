@@ -157,9 +157,9 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 	rhythmic_tms = True
 	stim_times = np.append(probe_trials[0], np.diff(probe_trials)) * ISI -5
 
-	def make_interval_array(T, minInterval, maxInterval): # generates random intervals for TMS bursts
+	def make_interval_array(T, minInterval, maxInterval,  frequency = tms_frequency): # generates random intervals for TMS bursts
 		interval_array = np.array((np.random.uniform(minInterval, maxInterval)))
-		while np.cumsum(interval_array)[-1] +.5 <= T:
+		while np.cumsum(interval_array)[-1] + (1/frequency*3) <= T:
 				nextInterval = np.random.uniform(minInterval, maxInterval)
 				interval_array = np.append(interval_array, nextInterval)
 		return interval_array[:-2]
@@ -813,7 +813,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 		response_task=show_probe(probe_task, probe_task_instruction_1,probe_task_instruction_2,  probe_instruction_confirm,nposs = 4, pin = probe_pin)
 	else:
 		response_task=show_probe(probe_task, probe_task_instruction_1,probe_task_instruction_2,  probe_instruction_confirm,nposs = 4)
-		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+	logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 						condition = condition, \
 						trial=ntrials,\
 						subj=expInfo['participant'], \
@@ -825,13 +825,13 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 						stimulus="probe_task", \
 						response= response_task, \
 						time="%.10f"%(task_clock.getTime()))
-		f.write(logtext)
-		f.flush()
+	f.write(logtext)
+	f.flush()
 	if eeg == True:
 		response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm,nposs = 4, pin = probe_pin)
 	else:
 		response_intention=show_probe(probe_intention,  probe_intention_instruction_1,probe_intention_instruction_2,  probe_instruction_confirm, nposs = 4)
-		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+	logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 						condition = condition, \
 						trial=ntrials,\
 						subj=expInfo['participant'], \
@@ -843,13 +843,13 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 						stimulus="probe_intention", \
 						response= response_intention, \
 						time="%.10f"%(task_clock.getTime()))
-		f.write(logtext)
-		f.flush()
+	f.write(logtext)
+	f.flush()
 	if eeg == True:
 		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4, pin = probe_pin)
 	else:
 		response_somnolence=show_probe(probe_somnolence, probe_somnolence_instruction_1,probe_somnolence_instruction_2,  probe_instruction_confirm, nposs = 4)
-		logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
+	logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format(\
 				condition = condition, \
 				trial=trial,\
 				subj=expInfo['participant'], \
@@ -861,8 +861,8 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 				stimulus="probe_somnolence", \
 				response= response_somnolence, \
 				time="%.10f"%(task_clock.getTime()))
-		f.write(logtext)
-		f.flush()
+	f.write(logtext)
+	f.flush()
 
 thankyou.draw()
 win.flip()
