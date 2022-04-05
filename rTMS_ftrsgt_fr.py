@@ -16,7 +16,7 @@ import threading
 from pyfirmata import Arduino, util
 eeg = False
 session_name = "training"
-tms_frequency = 6 #### SUBJECT-WISE VAR
+tms_frequency = 6.66 #### SUBJECT-WISE VAR
 
 ## global variables
 fullscreen=True
@@ -162,7 +162,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 				interval_array = np.append(interval_array, nextInterval)
 		return interval_array[:-2]
 
-	def generate_random_ipi(n_pulses, frequency = tms_frequency): 
+	def generate_random_ipi(n_pulses, frequency = tms_frequency):
 		ipis = np.empty(2)
 		for n_ipi in range(n_pulses - 2):
 			ipi = np.random.uniform(.025, 1/frequency + .003) #generate a random ipi from 20 ms to [period + 3] ms.
@@ -175,7 +175,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
 	for task_period in stim_times:
 		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
-	TMS = m.Master8('/dev/ttyUSB1')
+	TMS = m.Master8('/dev/ttyUSB0')
 	TMS.changeChannelMode(1, "G")
 	if expInfo["session"]=="Ar":
 		session_name = "active_rhTMS"
@@ -284,7 +284,7 @@ instruction1b = visual.TextStim(win=win, ori=0, name='text', #Talk about this at
 	depth=0.0)
 
 instruction1c = visual.TextStim(win=win, ori=0, name='text', #Talk about this at the meeting
-	text=u"Essayez de rester aussi concentré sur la tâche que vous le pouvez tout au long de l’expérience. 5.	Essayez de rester aussi concentré sur la tâche que vous le pouvez tout au long de l’expérience. Il n’est cependant pas rare que votre attention dévie de la tâche. C’est tout à fait normal.\n Vous serez occasionnellement interrompu pour répondre à des questions sur l’écran. Ces questions seront relatives à l’état de votre concentration, la qualité de vos pensées et votre niveau d’énergie. Pour répondre, déplacez le curseur vers la gauche et la droite en utilisant les mêmes touches que pour la tâche (S et L). Pour valider votre choix, appuyez ensuite sur la touche ‘ESPACE’.\n\nAppuyez n'importe quelle touche pour continuer.",    font='Arial',
+	text=u"Essayez de rester aussi concentré sur la tâche que vous le pouvez tout au long de l’expérience. Pour répondre, déplacez le curseur vers la gauche et la droite en utilisant les mêmes touches que pour la tâche (S et L). Pour valider votre choix, appuyez ensuite sur la touche ‘ESPACE’.\n\nAppuyez n'importe quelle touche pour continuer.",    font='Arial',
 	pos=[0, 0], height=0.07, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
@@ -335,13 +335,13 @@ real_experiment_starts=visual.TextStim(win=win, ori=0, name='text',
 probe_task=LikertScale(win, 4,
 	instruction_text=u"Juste avant l’interruption, votre attention était: \n",
 	scale_labels=["Entièrement HORS tâche", "", "", "Entièrement SUR la tâche"])
-	
+
 probe_task_instruction_1 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"Si vous répondez « 1 – Entièrement hors tâche »,\n cela signifie que vous pensiez\n à d’autres choses\n (rêverie, souvenirs,\n planification future, amis, etc.).",    font='Arial',
 	pos=[-.5, -.2], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_task_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"Si vous répondez « 4 – Entièrement sur la tâche »,\n cela signifie que vous étiez\n concentré sur la tâche\n (sur quels boutons vous allez appuyer,\n sur quels boutons vous avez appuyé,\n et à quel rythme, etc.).",    font='Arial',
 	pos=[.5, -.23], height=0.06, wrapWidth=None,
@@ -369,7 +369,7 @@ probe_intention_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
 	pos=[.5, -.37], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_somnolence=LikertScale(win, 4,
 	instruction_text=u"Comment vous sentez-vous ? \n\n",
 	scale_labels=["Très SOMNOLENT", "", "", "Très ALERTE"])
@@ -379,13 +379,13 @@ probe_somnolence_instruction_1 = visual.TextStim(win=win, ori=0, name='text',
 		pos=[-.5, -.25], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_somnolence_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"Si vous répondez « 4 – très ALERTE »,\n cela signifie que vous êtes sur le qui-vive.",    font='Arial',
 		pos=[.5, -.17], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 # probe_intention=LikertScale(win, 2,
 # 	instruction_text=u"Did you intend to stay on task? Use keys 1 or 2 to respond.",
 # 	scale_labels=["no", "yes"])
@@ -435,9 +435,11 @@ def show_probe(probe, probe_instruction_1, probe_instruction_2, instruction_conf
 			else:
 				if eeg == True:
 					eeg_trigger(probe_response_pin)
+				return position
 				probe.draw()
 				win.flip()
 				time.sleep(1.0)
+
 
 
 def waitforkey():
@@ -651,11 +653,11 @@ if expInfo["session"]=="training":
 
 		while 1:
 			keys=event.getKeys()
-			if key_left in keys:
+			if key_right in keys:
 				repeat_training=False
 				break
-			elif key_right in keys:
-				repeat_training=True
+			elif key_left in keys:
+				repeat_left=True
 				break
 			elif quit_button in keys:
 				sys.exit()

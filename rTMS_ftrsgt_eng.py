@@ -19,7 +19,7 @@ session_name = "training"
 tms_frequency = 6 #### SUBJECT-WISE VAR
 
 ## global variables
-fullscreen=False
+fullscreen=True
 quit_button="escape"
 key_left="s"
 key_right="l"
@@ -337,13 +337,13 @@ real_experiment_starts=visual.TextStim(win=win, ori=0, name='text',
 probe_task=LikertScale(win, 4,
 	instruction_text=u"Just prior to the interruption, your attention was: \n",
 	scale_labels=["Completely OFF-task", "", "", "Completely ON-task"])
-	
+
 probe_task_instruction_1 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"If you respond '1 – Completely OFF-task',\n it means that you were thinking\n of other things than the task\n (daydreaming, memories,\n future planning, friends, etc.).",    font='Arial',
 	pos=[-.5, -.2], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_task_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"If you respond '4 – Completely ON-task',\n it means that you were\n concentrated on the task\n (figuring out the right key to press,\n the rhythm etc.).",    font='Arial',
 	pos=[.5, -.2], height=0.06, wrapWidth=None,
@@ -371,8 +371,8 @@ probe_intention_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
 	pos=[.5, -.35], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
-	
+
+
 probe_somnolence=LikertScale(win, 4,
 	instruction_text=u"How do you feel? \n\n",
 	scale_labels=["Very DROWSY", "", "", "Very ALERT"])
@@ -382,7 +382,7 @@ probe_somnolence_instruction_1 = visual.TextStim(win=win, ori=0, name='text',
 		pos=[-.5, -.3], height=0.06, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
-	
+
 probe_somnolence_instruction_2 = visual.TextStim(win=win, ori=0, name='text',
 	text=u"If you respond '4 –Very ALERT',\n that means that\n you are perfectly alert.",    font='Arial',
 		pos=[.5, -.2], height=0.06, wrapWidth=None,
@@ -405,7 +405,7 @@ task_stimulus=visual.TextStim(win=win, ori=0, name='text',
 
 
 thankyou=visual.TextStim(win=win, ori=0, name='text',
-	text=u"Ça y est ! Merci !",    font='Arial',
+	text=u"All done! Thank you!",    font='Arial',
 	pos=[0, 0], height=0.15, wrapWidth=None,
 	color='white', colorSpace='rgb', opacity=1,
 	depth=0.0)
