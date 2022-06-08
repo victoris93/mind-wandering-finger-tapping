@@ -5,7 +5,7 @@ from psychopy import prefs
 prefs.hardware['audioLib'] = ['PTB']
 from psychopy import visual, core, data, event, logging, sound, gui, clock
 from psychopy.constants import *  # things like STARTED, FINISHED
-import numpy as np  # whole numpy lib is available, prepend 'np.'
+import numpy as np
 import time
 from numpy import sin, cos, tan, log, log10, pi, average, sqrt, std, deg2rad, rad2deg, linspace, asarray, round
 from numpy.random import random, randint, normal, shuffle
@@ -120,7 +120,6 @@ if expInfo["EEG"]=="Yes":
 	def eeg_trigger(pins):
 		for pin in pins:
 			pin.write(1)
-		for pin in pins:
 			pin.write(0)
 
 	ArduinoBoard = Arduino('/dev/ttyACM0') # Assigning triggers to pins via Arduino UNO
@@ -177,8 +176,8 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
 	for task_period in stim_times:
 		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
-	TMS = m.Master8('/dev/ttyUSB0')
-	TMS.changeChannelMode(1, "G")
+	#TMS = m.Master8('/dev/ttyUSB0')
+	#TMS.changeChannelMode(1, "G")
 	if expInfo["session"]=="Ar":
 		session_name = "active_rhTMS"
 	elif expInfo["session"]=="Sr":
@@ -190,7 +189,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 		elif expInfo["session"]=="AAr":
 			session_name = "active_arrhTMS"
 
-	def rTMS(tms, interval_array, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg, frequency = tms_frequency):
+	def rTMS(interval_array, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg, frequency = tms_frequency):
 		pulse_num = 1
 		TMSclock = core.Clock()
 		TMSclock.add(-1 * current_task_time)
@@ -200,9 +199,7 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 			if rhythmic == False:
 				ipis = generate_random_ipi(4)
 			for ipi in ipis:
-				tms.trigger(1)
-				if eeg == True:
-					eeg_trigger(tms_pin)
+				eeg_trigger(tms_pin)
 				logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
 						condition = condition, \
 						subj=expInfo['participant'], \
@@ -219,10 +216,8 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 				f.flush()
 				pulse_num += 1
 				time.sleep(ipi)
-			tms.trigger(1)
+			eeg_trigger(tms_pin)
 			pulse_num += 1
-			if eeg == True:
-				eeg_trigger(tms_pin)
 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
 						condition = condition, \
 						subj=expInfo['participant'], \
@@ -689,7 +684,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 	if 	expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
 		rTMS_interval_index = 1
 		if __name__ == "__main__":
-			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
+			rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[0], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
 			rTMS_Thread.start()
 	for trial in range(ntrials):
 		trial_clock.reset()
@@ -798,7 +793,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			f.flush()
 			if 	(expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
-					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
+					rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[rTMS_interval_index], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
 					rTMS_Thread.start()
 				task_stimulus.draw()
 				win.flip()

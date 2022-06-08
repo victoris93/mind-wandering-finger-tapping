@@ -11,15 +11,15 @@ from numpy import sin, cos, tan, log, log10, pi, average, sqrt, std, deg2rad, ra
 from numpy.random import random, randint, normal, shuffle
 import os  # handy system and path functions
 import sys
-import master8 as m
+#import master8 as m
 import threading
 from pyfirmata import Arduino, util
 eeg = False
 session_name = "training"
-tms_frequency = 6.66 #### SUBJECT-WISE VAR
+tms_frequency = 6 #### SUBJECT-WISE VAR
 
 ## global variables
-fullscreen=True
+fullscreen=False
 quit_button="escape"
 key_left="s"
 key_right="l"
@@ -119,7 +119,6 @@ if expInfo["EEG"]=="Yes":
 	def eeg_trigger(pins):
 		for pin in pins:
 			pin.write(1)
-		for pin in pins:
 			pin.write(0)
 
 	ArduinoBoard = Arduino('/dev/ttyACM0') # Assigning triggers to pins via Arduino UNO
@@ -165,18 +164,21 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 	def generate_random_ipi(n_pulses, frequency = tms_frequency):
 		ipis = np.empty(2)
 		for n_ipi in range(n_pulses - 2):
-			ipi = np.random.uniform(.025, 1/frequency + .003) #generate a random ipi from 20 ms to [period + 3] ms.
-			while ipi > 1/frequency - .003 and ipi < 1/frequency + .003: #check whether the generated ipi falls within the range of periods corresponding to the frequency of the rhythmic condition (highly unlikely)
+			ipi = np.random.uniform(.025, 1/frequency) #generate a random ipi from 20 ms to 1/frequency.
+			while ipi > 1/frequency - .010 and ipi < 1/frequency + .010: #check whether the generated ipi falls within the range of periods corresponding to the frequency of the rhythmic condition (highly unlikely). added 10 ms on each side to make the IPI very different from 1/frequency
 				ipi = np.random.uniform(.025, 1/frequency + .003)
 			ipis[n_ipi] = ipi
-		ipis = np.append(ipis, 1/frequency *(n_pulses-1) - sum(ipis)) # append the last ipi so that the sum of ipi equates to the duration of the burst in the rhythmic condition
+		ipis = np.append(ipis, 1/frequency *(n_pulses-1) - sum(ipis))
+		print(len(ipis))
+		print(ipis)
+		 # append the last ipi so that the sum of ipi equates to the duration of the burst in the rhythmic condition
 		return(ipis)
 
 	pulse_intervals = []# Create random intervals between 3 and 5 secs for pulses. They are predefined for the entire experiment
 	for task_period in stim_times:
 		pulse_intervals.append(make_interval_array(task_period, 3, 5)) # a list of arrays containing intervals: each array corresponds to the period before the following probe
-	TMS = m.Master8('/dev/ttyUSB0')
-	TMS.changeChannelMode(1, "G")
+	#TMS = m.Master8('/dev/ttyUSB0')
+	#TMS.changeChannelMode(1, "G")
 	if expInfo["session"]=="Ar":
 		session_name = "active_rhTMS"
 	elif expInfo["session"]=="Sr":
@@ -188,19 +190,20 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 		elif expInfo["session"]=="AAr":
 			session_name = "active_arrhTMS"
 
-	def rTMS(tms, interval_array, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg, frequency = tms_frequency):
+	def rTMS(interval_array, n_pulses, rhythmic, current_task_time, outputFile, participant, eeg = eeg, frequency = tms_frequency):
 		pulse_num = 1
 		TMSclock = core.Clock()
 		TMSclock.add(-1 * current_task_time)
 		for interval in interval_array:
-			time.sleep(interval - .001) #1 ms to send the trigger to master-8
+			time.sleep(interval - .001) #1 ms to send the trigger
 			ipis = np.full(3, 1/frequency)
 			if rhythmic == False:
 				ipis = generate_random_ipi(4)
 			for ipi in ipis:
-				tms.trigger(1)
-				if eeg == True:
-					eeg_trigger(tms_pin)
+				eeg_trigger(tms_pin)
+				#tms.trigger(1)
+				#if eeg == True:
+					#eeg_trigger(tms_pin)
 				logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
 						condition = condition, \
 						subj=expInfo['participant'], \
@@ -217,10 +220,11 @@ if expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="
 				f.flush()
 				pulse_num += 1
 				time.sleep(ipi)
-			tms.trigger(1)
+			eeg_trigger(tms_pin)
+			#tms.trigger(1)
 			pulse_num += 1
-			if eeg == True:
-				eeg_trigger(tms_pin)
+			#if eeg == True:
+				#eeg_trigger(tms_pin)
 			logtext="{condition},{subj},{age},{sex},{block_num},{EEG},{probe_freq},{trial},{time},{stimulus},{response}\n".format( \
 						condition = condition, \
 						subj=expInfo['participant'], \
@@ -687,7 +691,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 	if 	expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr":
 		rTMS_interval_index = 1
 		if __name__ == "__main__":
-			rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[0], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
+			rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[0], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo["participant"]))
 			rTMS_Thread.start()
 	for trial in range(ntrials):
 		trial_clock.reset()
@@ -796,7 +800,7 @@ if expInfo["session"] in ["N","Ar", "Sr", "AAr", "SAr"]:
 			f.flush()
 			if 	(expInfo["session"]=="Ar" or expInfo["session"]=="Sr" or expInfo["session"]=="AAr" or expInfo["session"]=="SAr" and rTMS_interval_index < len(pulse_intervals)):
 				if __name__ == "__main__":
-					rTMS_Thread = threading.Thread(target=rTMS, args=(TMS, pulse_intervals[rTMS_interval_index], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
+					rTMS_Thread = threading.Thread(target=rTMS, args=(pulse_intervals[rTMS_interval_index], 4, rhythmic_tms, task_clock.getTime(), datafile, expInfo['Block number']))
 					rTMS_Thread.start()
 				task_stimulus.draw()
 				win.flip()
